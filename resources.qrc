@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>waitor.gif</file>
+        <file>batter_waitor.gif</file>
+    </qresource>
+</RCC>

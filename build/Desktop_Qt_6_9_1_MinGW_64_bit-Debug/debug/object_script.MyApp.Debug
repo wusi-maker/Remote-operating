@@ -1,0 +1,14 @@
+debug/cardashboard.o
+debug/ffmpegdecoder.o
+debug/logindialog.o
+debug/main.o
+debug/mainwindow.o
+debug/mapcanvas.o
+debug/qcustomplot.o
+debug/qrc_resources.o
+debug/moc_cardashboard.o
+debug/moc_ffmpegdecoder.o
+debug/moc_logindialog.o
+debug/moc_mainwindow.o
+debug/moc_mapcanvas.o
+debug/moc_qcustomplot.o
