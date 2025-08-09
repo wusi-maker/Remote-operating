@@ -2,6 +2,7 @@
 #include"logindialog.h"
 #include <QApplication>
 #include<QDebug>
+#include"qdebug.h"
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -15,7 +16,7 @@ int main(int argc, char *argv[])
     // MainWindow w(login.getPort(), login.isTestMode(),9999);
 
 
-
+    qDebug()<<"zjut change";
     MainWindow w(8888, false,9999);
     w.show();
     return a.exec();

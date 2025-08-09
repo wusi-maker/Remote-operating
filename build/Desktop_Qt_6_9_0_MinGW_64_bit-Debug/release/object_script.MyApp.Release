@@ -1,0 +1,14 @@
+release/cardashboard.o
+release/ffmpegdecoder.o
+release/logindialog.o
+release/main.o
+release/mainwindow.o
+release/mapcanvas.o
+release/qcustomplot.o
+release/qrc_resources.o
+release/moc_cardashboard.o
+release/moc_ffmpegdecoder.o
+release/moc_logindialog.o
+release/moc_mainwindow.o
+release/moc_mapcanvas.o
+release/moc_qcustomplot.o
