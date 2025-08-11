@@ -3,7 +3,7 @@ build/
 Imation_music/build/
 
 # CMake
-#.txt.user
+Imation_music/*.txt.user
 
 # QMake
 *.pro.user*
