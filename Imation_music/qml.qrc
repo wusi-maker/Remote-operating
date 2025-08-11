@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Main.qml</file>
+        <file>Src/leftPage/Leftpage.qml</file>
+        <file>Src/rightPage/Rightpage.qml</file>
+        <file>Src/nightPage/Playmusic.qml</file>
+    </qresource>
+</RCC>

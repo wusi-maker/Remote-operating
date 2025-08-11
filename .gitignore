@@ -1,2 +1,15 @@
 # 忽略所有build目录
 build/
+Imation_music/build/
+
+# CMake
+#.txt.user
+
+# QMake
+*.pro.user*
+*.pro.user
+*.autosave
+
+# 日志和缓存
+*.log
+*.cache
