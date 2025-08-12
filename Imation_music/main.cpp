@@ -14,6 +14,6 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
     engine.load("qrc:/Main.qml");
     // engine.loadFromModule("Imation_music", "Main");
-
+    qDebug()<<"add ";
     return app.exec();
 }
