@@ -3,5 +3,6 @@
     <qresource prefix="/">
         <file>Resource/title/close.svg</file>
         <file>Resource/title/minimize.svg</file>
+        <file>Resource/title/user.svg</file>
     </qresource>
 </RCC>

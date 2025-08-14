@@ -4,5 +4,6 @@
         <file>Src/leftPage/Leftpage.qml</file>
         <file>Src/rightPage/Rightpage.qml</file>
         <file>Src/nightPage/Playmusic.qml</file>
+        <file>Src/title/MinAndMax.qml</file>
     </qresource>
 </RCC>
