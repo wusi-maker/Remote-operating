@@ -1,108 +1,95 @@
 import QtQuick 2.15
-
+import QtQuick.Controls
+import "../title"
 Rectangle{
     id:rightrect
-    Rectangle{
-        color:"transparent"
-        anchors.top: parent.top
-        anchors.right: parent.right
+    // 搜索框
+    Row{
+        id:searchRow
+        spacing: 10
         anchors.left: parent.left
+        anchors.leftMargin: 36
+        anchors.verticalCenter: parent.verticalCenter
+        Rectangle{
+            id:backgroundRect
+            width:24
+            height: 35
+            color: "transparent"
+            radius: 4
+            border.width: 1
+            border.color: "#2b2b31"
 
-        height: 60
-        Row{
-            id:closeRow
-            spacing: 15
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: 0.02*Window.width
             Image {
-                id: miniImg
-                anchors.verticalCenter: parent.verticalCenter
-                source: "qrc:/Resource/title/minimize.svg"
+                id:backimage
+                anchors.fill: parent
+                source: "qrc:/Resource/title/pointDown.svg"
+                rotation: 90
                 sourceSize: Qt.size(20,20)
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: "white"
-                    opacity: miniMouse.containsMouse ? 0.6 : 0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
-                }
-
-                MouseArea {
-                    id: miniMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.showMinimized()  // 注意：Window应改为root
-                }
-            }
-            Rectangle{
-                id:miniRect
-                width: 20
-                height: 2
-                anchors.verticalCenter: parent.verticalCenter
-                color:"#75777f"
-                // 鼠标悬浮事件
                 MouseArea{
                     anchors.fill: parent
                     hoverEnabled: true
                     onEntered: {
-                        miniRect.color="white"
+                        backimage.source="qrc:/Resource/title/pointWhite.svg"
                     }
                     onExited: {
-                        miniRect.color="#75777f"
-                    }
-                    onClicked: {
-                        root.showMinimized()
+                        backimage.source="qrc:/Resource/title/pointDown.svg"
                     }
                 }
             }
-            Rectangle{
-                id:maxRect
-                width: 20
-                height: width
-                radius: 2
-                border.width: 2
-                border.color: "#75777f"
-                anchors.verticalCenter: parent.verticalCenter
-                color:"transparent"
-                // 鼠标悬浮事件
+
+        }
+        TextField{
+            id:searchFidld
+            height: backgroundRect.height
+            width: 240
+            // 控制输入框的形状
+            background: Rectangle{
+
+            }
+
+        }
+        Rectangle{
+            id:soundHounRect
+            height: backgroundRect.height
+            width: height
+            color:"#241c26"
+            border.color: "#36262f"
+            border.width: 1
+            Image {
+                id:soundimage
+                anchors.fill: parent
+                source: "qrc:/Resource/title/MicrophoneDaufle.svg"
                 MouseArea{
                     anchors.fill: parent
                     hoverEnabled: true
                     onEntered: {
-                        maxRect.border.color="white"
+                        soundimage.source="qrc:/Resource/title/MicrophoneWhite.svg"
                     }
                     onExited: {
-                        maxRect.border.color="#75777f"
+                        soundimage.source="qrc:/Resource/title/MicrophoneDaufle.svg"
                     }
-                    onClicked: {
-                        root.showFullScreen()
-                    }
-                }
-            }
-            Image {
-                id: closeImg
-                anchors.verticalCenter: parent.verticalCenter
-                source: "qrc:/Resource/title/close.svg"
-                sourceSize: Qt.size(20,20)
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: "white"
-                    opacity: closeMouse.containsMouse ? 0.6 : 0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
-                }
-
-                MouseArea {
-                    id: closeMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Qt.quit()  // 注意：Window应改为root
                 }
             }
         }
     }
 
+    // 用户信息
+    UserConfigsetting{
+        id:otherRow
+        anchors.verticalCenter: minmaxMouse.verticalCenter
+        anchors.right: minmaxMouse.left
+        anchors.rightMargin: 10
+        spacing: 15
+    }
+
+    // 最大化最小化
+    MinandMax{
+        id:minmaxMouse
+        width: 180
+        color:"transparent"
+        anchors.top: parent.top
+        anchors.right: parent.right
+        // anchors.left: parent.left
+        height: 60
+    }
 }
