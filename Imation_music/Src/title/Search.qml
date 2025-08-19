@@ -47,6 +47,14 @@ Row{
         selectionColor: "#4a90e2"
         selectedTextColor: "#ffffff"
 
+        onActiveFocusChanged: {
+            if(activeFocus){
+                searchpop.open()
+            }else{
+                // searchpop.close()
+            }
+        }
+
         // 控制输入框的形状
         background: Rectangle{
             // 外部矩形
@@ -86,7 +94,8 @@ Row{
             MouseArea{
                 anchors.fill: parent
                 onClicked:  {
-                    innerRect.gradientStopPos=0
+                    // innerRect.gradientStopPos=0
+                    searchFidld.forceActiveFocus()
                     searchpop.open()
                 }
             }
@@ -98,10 +107,12 @@ Row{
         width: parent.width
         height:800
         y:searchFidld.height+10
+        visible: false
+        // closePolicy:CloseOnPressOutside
         background: Rectangle{
             anchors.fill: parent
             radius:4
-            color:"#2d2d37"
+            color:"#75757f"
             Item {
                 id: historItem
                 anchors.left: parent.left
