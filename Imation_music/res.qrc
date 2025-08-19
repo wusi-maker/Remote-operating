@@ -4,5 +4,14 @@
         <file>Resource/title/close.svg</file>
         <file>Resource/title/minimize.svg</file>
         <file>Resource/title/user.svg</file>
+        <file>Resource/title/config.svg</file>
+        <file>Resource/title/email.svg</file>
+        <file>Resource/title/skin.svg</file>
+        <file>Resource/title/pointDown.svg</file>
+        <file>Resource/title/pointWhite.svg</file>
+        <file>Resource/title/MicrophoneDaufle.svg</file>
+        <file>Resource/title/MicrophoneWhite.svg</file>
+        <file>Resource/title/search.svg</file>
+        <file>Resource/title/searchWhite.svg</file>
     </qresource>
 </RCC>
