@@ -312,5 +312,11 @@ Window {
         font.weight: Font.Normal
     }
 
+    // 初始化SharedNetworkConnection单例
+    Component.onCompleted: {
+        console.log("Main.qml: 初始化SharedNetworkConnection")
+        // SharedNetworkConnection作为单例会自动初始化
+    }
+
 }
 

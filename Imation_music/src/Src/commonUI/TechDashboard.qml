@@ -5,6 +5,7 @@ import FluentUI
 import "../rightPage"
 import "../title"
 import "../style"
+import "../Network"
 
 
 // 科技感仪表盘界面
@@ -12,14 +13,61 @@ Rectangle {
     id: techDashboard
     color: Theme.backgroundColor
     
+    // 攻击数据模型实例
+    AttackDataModel {
+        id: attackDataModel
+        
+        // 在组件完成时初始化车辆参数
+        Component.onCompleted: {
+            initializeVehicleParameters(vehicleNames)
+        }
+    }
+    
+    // 全局车辆名称列表 - 可统一修改和调用
+    // 车辆名称和选择状态
+    property var vehicleNames: ["Car001", "Car002", "Car003", "Car004", "Car005"]
+    property var vehicleSelectionStates: [1, 1, 1, 0, 0] // 1表示勾选，0表示未勾选，默认前3个勾选
+    
+    // 全局攻击JSON数据存储
+    property string globalAttackJsonString: ""
+    property var globalAttackJsonData: null
+    
+    // 根据选择状态动态生成可用车辆列表
+    property var globalVehicleNames: {
+        var result = []
+        for (var i = 0; i < vehicleNames.length; i++) {
+            if (vehicleSelectionStates[i] === 1) {
+                result.push(vehicleNames[i])
+            }
+        }
+        return result
+    }
+    
     // 公有属性：拓扑模式
     property string topologyMode: "mode1"
     
     // 多车辆攻击配置相关属性
-    property var selectedVehicles: ["Car001", "Car002", "Car003"]
-    property string currentConfigVehicle: "Car001"
-    property var vehicleParameters: ({
-        "Car001": {
+    property var selectedVehicles: attackDataModel.attackTarget.selectedNodes
+    property var selectedAttackModes: [] // 将通过attackComposition动态计算
+    property string currentConfigVehicle: selectedVehicles.length > 0 ? selectedVehicles[0] : ""
+    
+    // 从AttackDataModel获取车辆参数的函数
+    function getVehicleParameters(vehicleId) {
+        var nodeParams = attackDataModel.getNodeAttackParameters(vehicleId)
+        if (nodeParams) {
+            return {
+                attackType: getAttackTypeIndex(nodeParams.attackType),
+                attackMethod: getAttackMethodIndex(nodeParams.attackMethod),
+                duration: nodeParams.attackParameters.duration,
+                frequency: nodeParams.attackParameters.frequency,
+                intensity: nodeParams.attackParameters.intensity,
+                range: 50, // 默认值，AttackDataModel中没有此字段
+                delay: nodeParams.attackParameters.delayInjection,
+                packetLoss: nodeParams.attackParameters.expectedPacketLossRatio * 100
+            }
+        }
+        // 返回默认参数
+        return {
             attackType: 0,
             attackMethod: 0,
             duration: 60,
@@ -28,50 +76,38 @@ Rectangle {
             range: 50,
             delay: 100,
             packetLoss: 5
-        },
-        "Car002": {
-            attackType: 1,
-            attackMethod: 1,
-            duration: 80,
-            frequency: 15,
-            intensity: 7,
-            range: 60,
-            delay: 120,
-            packetLoss: 8
-        },
-        "Car003": {
-            attackType: 2,
-            attackMethod: 0,
-            duration: 45,
-            frequency: 8,
-            intensity: 4,
-            range: 40,
-            delay: 90,
-            packetLoss: 3
         }
-    })
+    }
+    
+    // 攻击类型映射函数
+    function getAttackTypeIndex(attackType) {
+        switch(attackType) {
+            case "DDoS": return 0
+            case "REPLAY": return 1
+            case "SPOOFING": return 2
+            case "MIXED": return 3
+            case "SINGLE": return 0  // 添加SINGLE类型映射
+            default: return 0
+        }
+    }
+    
+    function getAttackMethodIndex(attackMethod) {
+        switch(attackMethod) {
+            case "SUSTAINED": return 0
+            case "INTERMITTENT": return 1
+            case "BURST": return 2
+            default: return 0
+        }
+    }
     
     // JavaScript函数
     function updateSelectedVehicles() {
         var selected = []
-        var vehicleNames = ["Car001", "Car002", "Car003", "Car004", "Car005"]
         
-        // 查找车辆选择区域中的复选框
-        if (vehicleSelectionArea && vehicleSelectionArea.children.length > 0) {
-            var column = vehicleSelectionArea.children[0]
-            if (column && column.children.length > 1) {
-                var flow = column.children[1]
-                if (flow && flow.children.length > 0) {
-                    var repeater = flow.children[0]
-                    if (repeater) {
-                        for (var i = 0; i < vehicleNames.length; i++) {
-                            var checkbox = repeater.itemAt(i)
-                            if (checkbox && checkbox.checked) {
-                                selected.push(vehicleNames[i])
-                            }
-                        }
-                    }
-                }
+        // 根据vehicleSelectionStates直接生成选中的车辆列表
+        for (var i = 0; i < vehicleNames.length; i++) {
+            if (vehicleSelectionStates[i] === 1) {
+                selected.push(vehicleNames[i])
             }
         }
         
@@ -95,21 +131,7 @@ Rectangle {
     }
     
     function loadVehicleParameters(vehicleId) {
-        if (!vehicleParameters[vehicleId]) {
-            // 如果没有该车辆的参数，创建默认参数
-            vehicleParameters[vehicleId] = {
-                attackType: 0,
-                attackMethod: 0,
-                duration: 60,
-                frequency: 10,
-                intensity: 5,
-                range: 50,
-                delay: 100,
-                packetLoss: 5
-            }
-        }
-        
-        var params = vehicleParameters[vehicleId]
+        var params = getVehicleParameters(vehicleId)
         
         // 更新UI控件的值
         if (attackTypeCombo) attackTypeCombo.currentIndex = params.attackType
@@ -125,9 +147,15 @@ Rectangle {
     }
     
     function saveCurrentVehicleParameters() {
-        if (!currentConfigVehicle) return
+        if (!currentConfigVehicle) {
+            console.log("saveCurrentVehicleParameters: currentConfigVehicle is empty")
+            return
+        }
         
-        vehicleParameters[currentConfigVehicle] = {
+        console.log("saveCurrentVehicleParameters: currentConfigVehicle =", currentConfigVehicle)
+        
+        // 获取当前UI控件的值
+        var newParams = {
             attackType: attackTypeCombo ? attackTypeCombo.currentIndex : 0,
             attackMethod: attackMethodCombo ? attackMethodCombo.currentIndex : 0,
             duration: durationSlider ? durationSlider.value : 60,
@@ -137,7 +165,246 @@ Rectangle {
             delay: delaySlider ? delaySlider.value : 100,
             packetLoss: packetLossSlider ? packetLossSlider.value : 5
         }
+        
+        console.log("saveCurrentVehicleParameters: newParams =", JSON.stringify(newParams))
+        
+        // 更新AttackDataModel中的数据
+        var nodeParams = attackDataModel.getNodeAttackParameters(currentConfigVehicle)
+        if (nodeParams) {
+            console.log("saveCurrentVehicleParameters: found nodeParams for", currentConfigVehicle)
+            
+            // 更新攻击类型
+            var attackTypeStr = getAttackTypeString(newParams.attackType)
+            attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackType", attackTypeStr)
+            
+            // 更新攻击方法
+            var attackMethodStr = getAttackMethodString(newParams.attackMethod)
+            attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackMethod", attackMethodStr)
+            
+            // 更新攻击参数 - 逐个更新属性而不是替换整个对象
+            for (var i = 0; i < attackDataModel.nodeAttackParameters.count; i++) {
+                var item = attackDataModel.nodeAttackParameters.get(i);
+                if (item.nodeSelection === currentConfigVehicle) {
+                    console.log("saveCurrentVehicleParameters: updating parameters for", currentConfigVehicle, "at index", i)
+                    console.log("saveCurrentVehicleParameters: BEFORE update - duration:", item.attackParameters.duration, "delayInjection:", item.attackParameters.delayInjection)
+                    
+                    // 创建新的攻击参数对象
+                    var newAttackParams = {
+                        "duration": newParams.duration,
+                        "frequency": newParams.frequency,
+                        "intensity": newParams.intensity,
+                        "delayInjection": newParams.delay,
+                        "expectedPacketLossRatio": newParams.packetLoss / 100
+                    }
+                    
+                    // 使用setProperty方法更新整个attackParameters对象
+                    attackDataModel.nodeAttackParameters.setProperty(i, "attackParameters", newAttackParams)
+                    
+                    // 验证更新后的值
+                    var updatedItem = attackDataModel.nodeAttackParameters.get(i);
+                    console.log("saveCurrentVehicleParameters: AFTER update - duration:", updatedItem.attackParameters.duration, "delayInjection:", updatedItem.attackParameters.delayInjection)
+                    console.log("saveCurrentVehicleParameters: updated delayInjection to", newParams.delay)
+                    break;
+                }
+            }
+        } else {
+            console.log("saveCurrentVehicleParameters: nodeParams not found for", currentConfigVehicle)
+        }
     }
+    
+    // 攻击类型反向映射函数
+    function getAttackTypeString(index) {
+        switch(index) {
+            case 0: return "DDoS"
+            case 1: return "REPLAY" // 重放攻击
+            case 2: return "SPOOFING"
+            case 3: return "MIXED"
+            default: return "DDoS"
+        }
+    }
+    
+    // 根据攻击目标类型获取攻击类型字符串
+    function getAttackTypeByTargetType(targetTypeIndex) {
+        switch(targetTypeIndex) {
+            case 0: return "SINGLE"  // SINGLE模式
+            case 1: return "MULTIPLE" // MULTIPLE模式
+            case 2: return "ALL"     // ALL模式
+            default: return "SINGLE"
+        }
+    }
+    
+    function getAttackMethodString(index) {
+        switch(index) {
+            case 0: return "SUSTAINED"
+            case 1: return "INTERMITTENT"
+            case 2: return "BURST"
+            default: return "SUSTAINED"
+        }
+    }
+    
+    // 更新所有选中车辆的参数（ALL模式）
+    function updateAllSelectedVehiclesParameter(paramName, value) {
+        for (var i = 0; i < attackDataModel.nodeAttackParameters.count; i++) {
+            var item = attackDataModel.nodeAttackParameters.get(i);
+            if (vehicleSelectionStates[i] === 1) { // 只更新选中的车辆
+                switch(paramName) {
+                    case "duration":
+                        item.attackParameters.duration = value
+                        break
+                    case "frequency":
+                        item.attackParameters.frequency = value
+                        break
+                    case "intensity":
+                        item.attackParameters.intensity = value
+                        break
+                    case "range":
+                        // range不在attackParameters中，可能需要特殊处理
+                        break
+                    case "delay":
+                        item.attackParameters.delayInjection = value
+                        break
+                    case "packetLoss":
+                        item.attackParameters.expectedPacketLossRatio = value / 100
+                        break
+                }
+            }
+        }
+    }
+    
+    function updateSelectedAttackModes() {
+        var selected = []
+        var attackModes = ["DDoS攻击", "重放攻击", "欺骗攻击"]
+        
+        // 从AttackDataModel获取当前车辆的攻击组成信息
+        if (currentConfigVehicle) {
+            var nodeParams = attackDataModel.getNodeAttackParameters(currentConfigVehicle)
+            if (nodeParams && nodeParams.attackComposition) {
+                var composition = nodeParams.attackComposition
+                
+                // 根据attackComposition确定选中的攻击模式
+                if (composition.ddosEnabled) {
+                    selected.push("DDoS攻击")
+                }
+                if (composition.replayEnabled) {
+                    selected.push("重放攻击")
+                }
+                if (composition.spoofingEnabled) {
+                    selected.push("欺骗攻击")
+                }
+            }
+        }
+        
+        selectedAttackModes = selected
+        
+        // 更新UI中的复选框状态
+        if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
+            var column = mixedAttackSelectionArea.children[0]
+            if (column && column.children && column.children.length > 0) {
+                for (var i = 0; i < column.children.length && i < attackModes.length; i++) {
+                    var checkbox = column.children[i]
+                    if (checkbox && checkbox.text && checkbox.checked !== undefined) {
+                        checkbox.checked = selected.indexOf(attackModes[i]) !== -1
+                    }
+                }
+            }
+        }
+        
+        // 根据选中的攻击模式更新攻击类型下拉框
+        if (attackTypeCombo) {
+            if (selected.length === 0) {
+                // 没有选中任何攻击模式，保持当前下拉框状态
+            } else if (selected.length === 1) {
+                // 选中单个攻击模式，下拉框显示对应类型
+                var singleAttackIndex = attackModes.indexOf(selected[0])
+                if (singleAttackIndex !== -1) {
+                    attackTypeCombo.currentIndex = singleAttackIndex
+                }
+            } else {
+                // 选中多个攻击模式，下拉框显示混合攻击
+                attackTypeCombo.currentIndex = 3 // 混合攻击是第4个选项（索引3）
+            }
+        }
+        
+        console.log("选中的攻击模式:", selected)
+    }
+    
+    // 处理攻击类型下拉框选择变化
+    function updateAttackTypeSelection(selectedIndex) {
+        var attackModes = ["DDoS攻击", "重放攻击", "欺骗攻击"]
+        
+        if (!currentConfigVehicle) return
+        
+        // 更新AttackDataModel中的攻击组成
+        var composition = {
+            ddosEnabled: false,
+            replayEnabled: false,
+            spoofingEnabled: false
+        }
+        
+        if (selectedIndex >= 0 && selectedIndex < 3) {
+            // 选择了具体的攻击类型，只启用对应的攻击模式
+            switch(selectedIndex) {
+                case 0: composition.ddosEnabled = true; break
+                case 1: composition.replayEnabled = true; break
+                case 2: composition.spoofingEnabled = true; break
+            }
+        } else if (selectedIndex === 3) {
+            // 选择了混合攻击，检查当前复选框状态
+            if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
+                var column = mixedAttackSelectionArea.children[0]
+                if (column && column.children && column.children.length > 0) {
+                    var hasChecked = false
+                    for (var j = 0; j < column.children.length && j < attackModes.length; j++) {
+                        var cb = column.children[j]
+                        if (cb && cb.text && cb.checked !== undefined && cb.checked) {
+                            hasChecked = true
+                            switch(j) {
+                                case 0: composition.ddosEnabled = true; break
+                                case 1: composition.replayEnabled = true; break
+                                case 2: composition.spoofingEnabled = true; break
+                            }
+                        }
+                    }
+                    
+                    if (!hasChecked) {
+                        // 默认选中前两个
+                        composition.ddosEnabled = true
+                        composition.replayEnabled = true
+                        for (var k = 0; k < Math.min(2, column.children.length, attackModes.length); k++) {
+                            var defaultCb = column.children[k]
+                            if (defaultCb && defaultCb.text && defaultCb.checked !== undefined) {
+                                defaultCb.checked = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 更新AttackDataModel中的攻击组成
+        attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackComposition", composition)
+        
+        // 更新UI中的复选框状态
+        if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
+            var column = mixedAttackSelectionArea.children[0]
+            if (column && column.children && column.children.length > 0) {
+                for (var i = 0; i < column.children.length && i < attackModes.length; i++) {
+                    var checkbox = column.children[i]
+                    if (checkbox && checkbox.text && checkbox.checked !== undefined) {
+                        switch(i) {
+                            case 0: checkbox.checked = composition.ddosEnabled; break
+                            case 1: checkbox.checked = composition.replayEnabled; break
+                            case 2: checkbox.checked = composition.spoofingEnabled; break
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 更新selectedAttackModes属性
+        updateSelectedAttackModes()
+    }
+
     
     // 设置默认夜间模式
     Component.onCompleted: {
@@ -359,7 +626,7 @@ Rectangle {
                             // 攻击目标类型选择
                             Row {
                                 width: parent.width
-                                spacing: 15
+                                spacing: 8
                                 Text {
                                     text: "攻击模式设置"
                                     color: "#00ffff"
@@ -369,7 +636,7 @@ Rectangle {
 
                                 }
                                 Item{
-                                    width: parent.width - 70 - 140 - 140
+                                    width: parent.width - 70 - 140 - 180
                                     height: 35
                                 }
                                 Text {
@@ -382,7 +649,7 @@ Rectangle {
                                 
                                 FluComboBox {
                                     id: attackTargetTypeCombo
-                                    width: 140
+                                    width: 190
                                     model: ["SINGLE", "MULTIPLE", "ALL"]
                                     currentIndex: 0
                                     onCurrentIndexChanged: {
@@ -390,12 +657,19 @@ Rectangle {
                                             vehicleSelectionArea.visible = true
                                             currentVehicleTitle.visible = true
                                         }else if(currentIndex===2) { // ALL
-                                            vehicleSelectionArea.visible = false
+                                            vehicleSelectionArea.visible = true
                                             currentVehicleTitle.visible = true
+                                            // 在ALL模式下，选中所有车辆
+                                            for (var i = 0; i < vehicleSelectionArea.children[0].children[1].children[0].count; i++) {
+                                                var checkbox = vehicleSelectionArea.children[0].children[1].children[0].itemAt(i)
+                                                if (checkbox) {
+                                                    checkbox.checked = true
+                                                }
+                                            }
                                         }
                                         else {
                                             vehicleSelectionArea.visible = false
-                                            currentVehicleTitle.visible = false
+                                            currentVehicleTitle.visible = true  // 默认开启，因为无论是单个车辆还是所有车辆都需要选择设置的车辆编号
                                         }
                                     }
                                 }
@@ -406,7 +680,8 @@ Rectangle {
                             // 车辆选择区域（仅在MULTIPLE模式下显示）
                             Rectangle {
                                 id: vehicleSelectionArea
-                                width: parent.width
+                                width: parent.width-10
+                                anchors.left: parent.left
                                 height: visible ? 80 : 0
                                 color: "#2a2a2a"
                                 border.color: "#555555"
@@ -429,24 +704,46 @@ Rectangle {
                                     Flow {
                                         width: parent.width
                                         spacing: 8
+                                        anchors.horizontalCenter: parent.horizontalCenter
                                         
                                         Repeater {
-                                            model: ["Car001", "Car002", "Car003", "Car004", "Car005"]
+                                            model: vehicleNames
                                             
                                             FluCheckBox {
                                                 text: modelData
-                                                checked: index < 3 // 默认选中前3个
+                                                // 当选择为ALL的时候直接将状态数组设置为全一
+                                                checked: attackTargetTypeCombo.currentIndex === 2 ? true : (vehicleSelectionStates[index] === 1) // ALL模式下全选，否则根据状态数组
+                                                enabled: attackTargetTypeCombo.currentIndex !== 2 // 在ALL模式下禁用
                                                 onCheckedChanged: {
+                                                    // 在ALL模式下不允许取消勾选
+                                                    if (attackTargetTypeCombo.currentIndex === 2 && !checked) {
+                                                        checked = true
+                                                        return
+                                                    }
+                                                    
+                                                    // 更新车辆选择状态
+                                                    var newStates = vehicleSelectionStates.slice() // 复制数组
+                                                    newStates[index] = checked ? 1 : 0
+                                                    vehicleSelectionStates = newStates
+                                                    
+                                                    // 重新计算globalVehicleNames
+                                                    var result = []
+                                                    for (var i = 0; i < vehicleNames.length; i++) {
+                                                        if (vehicleSelectionStates[i] === 1) {
+                                                            result.push(vehicleNames[i])
+                                                        }
+                                                    }
+                                                    globalVehicleNames = result
+                                                    
                                                     // 更新选中的车辆列表
                                                     updateSelectedVehicles()
                                                     
                                                     // 如果当前车辆被取消选择，切换到第一个选中的车辆
                                                     if (!checked && currentConfigVehicle === modelData) {
                                                         var firstSelected = ""
-                                                        for (var i = 0; i < 5; i++) {
-                                                            var checkbox = parent.children[i]
-                                                            if (checkbox.checked) {
-                                                                firstSelected = checkbox.text
+                                                        for (var j = 0; j < vehicleNames.length; j++) {
+                                                            if (vehicleSelectionStates[j] === 1) {
+                                                                firstSelected = vehicleNames[j]
                                                                 break
                                                             }
                                                         }
@@ -469,13 +766,14 @@ Rectangle {
                             // 当前配置车辆标题
                             Rectangle {
                                 id: currentVehicleTitle
-                                width: parent.width
+                                width: parent.width-10
+                                anchors.left: parent.left
                                 height: visible ? 35 : 0
                                 color: "#333333"
                                 border.color: "#00ffff"
                                 border.width: 1
                                 radius: 4
-                                visible: false
+                                visible: true
                                 
                                 Row {
                                     anchors.centerIn: parent
@@ -512,83 +810,166 @@ Rectangle {
                                 }
                             }
                             
-                            // 攻击类型和方式
+                            // 攻击类型和方式水平布局
                             Row {
                                 width: parent.width
-                                spacing: 15
+                                spacing: 10
                                 
-                                Text {
-                                    text: "攻击类型:"
-                                    color: "#ffffff"
-                                    font.pixelSize: 13
-                                    width: 70
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                
-                                FluComboBox {
-                                    id: attackTypeCombo
-                                    width: 140
-                                    model: ["DDoS攻击", "重放攻击","欺骗攻击" , "混合攻击" ]
-                                    currentIndex: 0
-                                    onCurrentIndexChanged: {
-                                        if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                            saveCurrentVehicleParameters()
+                                // 左侧：攻击类型区域
+                                Column {
+                                    width: (parent.width - parent.spacing) / 2
+                                    spacing: 8
+                                    
+                                    // 攻击类型选择
+                                    Row {
+                                        width: parent.width
+                                        spacing: 8
+                                        
+                                        Text {
+                                            text: "攻击类型:"
+                                            color: "#ffffff"
+                                            font.pixelSize: 13
+                                            width: 70
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        
+                                        FluComboBox {
+                                            id: attackTypeCombo
+                                            width: 140
+                                            model: ["DDoS攻击", "重放攻击","欺骗攻击" , "混合攻击" ]
+                                            currentIndex: 0
+                                            onCurrentIndexChanged: {
+                                                if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
+                                                    saveCurrentVehicleParameters()
+                                                }
+                                                // 控制混合攻击模式选择区域的显示
+                                                mixedAttackSelectionArea.visible = true // 混合攻击是第4个选项（索引3）
+                                                
+                                                // 调用函数处理下拉框选择变化
+                                                updateAttackTypeSelection(currentIndex)
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 混合攻击模式选择区域（仅在选择混合攻击时显示）
+                                    Rectangle {
+                                        id: mixedAttackSelectionArea
+                                        width: parent.width
+                                        height: 100
+                                        color: "transparent"
+                                        border.color: "#555555"
+                                        border.width: 0
+                                        radius: 4
+                                        visible: true
+                                        
+                                        Column {
+                                            // anchors.centerIn: parent
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.rightMargin:0
+                                            anchors.topMargin: 5
+                                            spacing: 8
+                                            
+                                            Repeater {
+                                                model: ["DDoS攻击", "重放攻击", "欺骗攻击"]
+                                                
+                                                FluCheckBox {
+                                                    text: modelData
+                                                    width: 140  // 与攻击类型下拉框保持一致的宽度
+                                                    height: 20  // 设置合适的高度
+                                                    checked: index < 2 // 默认选中前2个
+                                                    onCheckedChanged: {
+                                                        // 更新AttackDataModel中的攻击组合数据
+                                                        var vehicleId = currentConfigVehicle
+                                                        var nodeParam = attackDataModel.getNodeAttackParameters(vehicleId)
+                                                        if (nodeParam) {
+                                                            if (index === 0) { // DDoS攻击
+                                                                nodeParam.attackComposition.ddosEnabled = checked
+                                                            } else if (index === 1) { // 重放攻击
+                                                                nodeParam.attackComposition.replayEnabled = checked
+                                                            } else if (index === 2) { // 欺骗攻击
+                                                                nodeParam.attackComposition.spoofingEnabled = checked
+                                                            }
+                                                            attackDataModel.updateNodeAttackParameter(vehicleId, nodeParam)
+                                                        }
+                                                        
+                                                        // 更新选中的攻击模式列表
+                                                        updateSelectedAttackModes()
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                                 
-                                Text {
-                                    text: "攻击方式:"
-                                    color: "#ffffff"
-                                    font.pixelSize: 13
-                                    width: 70
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                
-                                FluComboBox {
-                                    id: attackMethodCombo
-                                    width: 140
-                                    model: ["持续攻击", "间歇攻击", "突发攻击"]
-                                    currentIndex: 0
-                                    onCurrentIndexChanged: {
-                                        if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                            saveCurrentVehicleParameters()
+                                // 右侧：攻击方式、攻击对象、优先级区域
+                                Column {
+                                    width: (parent.width - parent.spacing) / 2
+                                    spacing: 15
+                                    
+                                    // 攻击方式组
+                                    Row {
+                                        spacing: 8
+                                        
+                                        Text {
+                                            text: "攻击方式:"
+                                            color: "#ffffff"
+                                            font.pixelSize: 13
+                                            width: 70
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        
+                                        FluComboBox {
+                                            id: attackMethodCombo
+                                            width: 140
+                                            model: ["持续攻击", "间歇攻击", "突发攻击"]
+                                            currentIndex: 0
+                                            onCurrentIndexChanged: {
+                                                if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
+                                                    saveCurrentVehicleParameters()
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }
-                            
-                            Row {
-                                width: parent.width
-                                spacing: 15
-                                
-                                Text {
-                                    text: "攻击对象:"
-                                    color: "#ffffff"
-                                    font.pixelSize: 13
-                                    width: 70
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                
-                                FluComboBox {
-                                    id: attackObjectCombo
-                                    width: 140
-                                    model: ["所有链路", "单独链路", "多条链路"]
-                                    currentIndex: 0
-                                }
-
-                                Text {
-                                    text: "优先级:"
-                                    color: "#ffffff"
-                                    font.pixelSize: 13
-                                    width: 70
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                
-                                FluComboBox {
-                                    width: 140
-                                    model: ["高", "中", "低", "紧急"]
-                                    currentIndex: 1
+                                    
+                                    // 攻击对象组
+                                    Row {
+                                        spacing: 8
+                                        
+                                        Text {
+                                            text: "攻击对象:"
+                                            color: "#ffffff"
+                                            font.pixelSize: 13
+                                            width: 70
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        
+                                        FluComboBox {
+                                            id: attackObjectCombo
+                                            width: 140
+                                            model: ["所有链路", "单独链路", "多条链路"]
+                                            currentIndex: 0
+                                        }
+                                    }
+                                    
+                                    // 优先级组
+                                    Row {
+                                        spacing: 8
+                                        
+                                        Text {
+                                            text: "优先级:"
+                                            color: "#ffffff"
+                                            font.pixelSize: 13
+                                            width: 70
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        
+                                        FluComboBox {
+                                            width: 140
+                                            model: ["高", "中", "低", "紧急"]
+                                            currentIndex: 1
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -598,7 +979,7 @@ Rectangle {
                             width: parent.width
                             spacing: 8
                             
-                            // 当前配置车辆标题
+                            // 当前配置车辆标题，默认关闭
                             Rectangle {
                                 width: parent.width
                                 height: 35
@@ -647,7 +1028,7 @@ Rectangle {
                                         
                                         FluTextBox {
                                             id: durationInput
-                                            width: 70
+                                            width: 100
                                             height: 28
                                             text: durationSlider.value.toString()
                                             placeholderText: "10-300"
@@ -677,8 +1058,17 @@ Rectangle {
                                         stepSize: 10
                                         onValueChanged: {
                                             durationInput.text = value.toString()
-                                            if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                saveCurrentVehicleParameters()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("duration", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("duration", value)
+                                                }
                                             }
                                         }
                                     }
@@ -702,7 +1092,7 @@ Rectangle {
                                         
                                         FluTextBox {
                                             id: frequencyInput
-                                            width: 70
+                                            width: 100
                                             height: 28
                                             text: frequencySlider.value.toString()
                                             placeholderText: "1-100"
@@ -732,8 +1122,17 @@ Rectangle {
                                         stepSize: 1
                                         onValueChanged: {
                                             frequencyInput.text = value.toString()
-                                            if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                saveCurrentVehicleParameters()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("frequency", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("frequency", value)
+                                                }
                                             }
                                         }
                                     }
@@ -763,7 +1162,7 @@ Rectangle {
                                         
                                         FluTextBox {
                                             id: intensityInput
-                                            width: 70
+                                            width: 100
                                             height: 28
                                             text: intensitySlider.value.toString()
                                             placeholderText: "1-10"
@@ -793,8 +1192,17 @@ Rectangle {
                                         stepSize: 1
                                         onValueChanged: {
                                             intensityInput.text = value.toString()
-                                            if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                saveCurrentVehicleParameters()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("intensity", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("intensity", value)
+                                                }
                                             }
                                         }
                                     }
@@ -818,7 +1226,7 @@ Rectangle {
                                         
                                         FluTextBox {
                                             id: rangeInput
-                                            width: 70
+                                            width: 100
                                             height: 28
                                             text: rangeSlider.value.toString()
                                             placeholderText: "10-100"
@@ -848,8 +1256,17 @@ Rectangle {
                                         stepSize: 5
                                         onValueChanged: {
                                             rangeInput.text = value.toString()
-                                            if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                saveCurrentVehicleParameters()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("range", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("range", value)
+                                                }
                                             }
                                         }
                                     }
@@ -879,13 +1296,14 @@ Rectangle {
                                         
                                         FluTextBox {
                                             id: delayInput
-                                            width: 70
+                                            width: 100
                                             height: 28
                                             text: delaySlider.value.toString()
                                             placeholderText: "0-1000"
                                             validator: IntValidator { bottom: 0; top: 1000 }
                                             onTextChanged: {
                                                 var newValue = parseInt(text)
+                                                console.log("delayInput text changed:", text, "newValue:", newValue)
                                                 if (!isNaN(newValue) && newValue >= 0 && newValue <= 1000) {
                                                     delaySlider.value = newValue
                                                 }
@@ -908,7 +1326,20 @@ Rectangle {
                                         value: 100
                                         stepSize: 10
                                         onValueChanged: {
+                                            console.log("delaySlider value changed:", value)
                                             delayInput.text = value.toString()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("delayInjection", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("delayInjection", value)
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -961,6 +1392,18 @@ Rectangle {
                                         stepSize: 1
                                         onValueChanged: {
                                             packetLossInput.text = value.toString()
+                                            if (attackTargetTypeCombo) {
+                                                if (attackTargetTypeCombo.currentIndex === 0) {
+                                                    // SINGLE模式：保存当前车辆参数
+                                                    saveCurrentVehicleParameters()
+                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
+                                                    // ALL模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("expectedPacketLossRatio", value)
+                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
+                                                    // MULTIPLE模式：更新所有选中车辆的参数
+                                                    updateAllSelectedVehiclesParameter("expectedPacketLossRatio", value)
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1068,9 +1511,9 @@ Rectangle {
                                     text: "重置参数"
                                     width: 120
                                     height: 45
-                                    anchors.left: parent.horizontalCenter
-                                    anchors.leftMargin: -127.5  // -(120*2 + 15)/2 = -127.5
-                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.right: applyButton.left
+                                    anchors.rightMargin:15  // -(120*2 + 15)/2 = -127.5
+                                    anchors.verticalCenter: applyButton.verticalCenter
                                     normalColor: "#2d5aa0"
                                     hoverColor: "#3d6bb0"
                                     onClicked: {
@@ -1081,21 +1524,114 @@ Rectangle {
                                         rangeSlider.value = 50
                                         delaySlider.value = 100
                                         packetLossSlider.value = 5
+                                        
+                                        // 保存重置后的参数到AttackDataModel
+                                        if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
+                                            saveCurrentVehicleParameters()
+                                        }
                                     }
                                 }
                                 
                                 FluButton {
+                                    id: applyButton
                                     text: "应用参数"
                                     width: 120
                                     height: 45
-                                    anchors.left: parent.horizontalCenter
-                                    anchors.leftMargin: 7.5  // 15/2 = 7.5
+                                    // anchors.left: parent.horizontalCenter
+                                    // anchors.leftMargin: 7.5  // 15/2 = 7.5
+                                    anchors.centerIn: parent
                                     anchors.verticalCenter: parent.verticalCenter
                                     normalColor: "#2d5aa0"
                                     hoverColor: "#3d6bb0"
                                     onClicked: {
                                         // 应用当前参数设置
                                         console.log("应用攻击参数设置")
+                                        
+                                        // 根据攻击目标类型设置攻击类型
+                                        if (attackTargetTypeCombo) {
+                                            var targetType = getAttackTypeByTargetType(attackTargetTypeCombo.currentIndex)
+                                            console.log("设置攻击类型为:", targetType)
+                                            
+                                            if (attackTargetTypeCombo.currentIndex === 0) { // SINGLE模式
+                                                // 更新所有车辆的攻击类型为SINGLE
+                                                for (var i = 0; i < attackDataModel.nodeAttackParameters.count; i++) {
+                                                    attackDataModel.updateNodeAttackParameter(
+                                                        attackDataModel.nodeAttackParameters.get(i).nodeSelection, 
+                                                        "attackType", 
+                                                        "SINGLE"
+                                                    )
+                                                }
+                                                console.log("已将所有车辆攻击类型设置为SINGLE")
+                                            } else if (attackTargetTypeCombo.currentIndex === 1) { // MULTIPLE模式
+                                                // 只更新选中车辆的攻击类型为MULTIPLE
+                                                for (var j = 0; j < vehicleSelectionStates.length; j++) {
+                                                    if (vehicleSelectionStates[j] === 1) {
+                                                        attackDataModel.updateNodeAttackParameter(
+                                                            vehicleNames[j], 
+                                                            "attackType", 
+                                                            "MULTIPLE"
+                                                        )
+                                                    }
+                                                }
+                                                console.log("已将选中车辆攻击类型设置为MULTIPLE")
+                                            } else if (attackTargetTypeCombo.currentIndex === 2) { // ALL模式
+                                                // 更新所有车辆的攻击类型为ALL
+                                                for (var k = 0; k < attackDataModel.nodeAttackParameters.count; k++) {
+                                                    attackDataModel.updateNodeAttackParameter(
+                                                        attackDataModel.nodeAttackParameters.get(k).nodeSelection, 
+                                                        "attackType", 
+                                                        "ALL"
+                                                    )
+                                                }
+                                                console.log("已将所有车辆攻击类型设置为ALL")
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                FluButton {
+                                    text: "导出数据"
+                                    width: 120
+                                    height: 45
+                                    anchors.left: applyButton.right
+                                    anchors.leftMargin: 15  // 120 + 15 + 7.5 = 142.5
+                                    anchors.verticalCenter: applyButton.verticalCenter
+                                    normalColor: "#2d8a50"
+                                    hoverColor: "#3d9a60"
+                                    onClicked: {
+                                        // 根据当前攻击目标类型导出相应的数据
+                                        var jsonData
+                                        var currentMode = getAttackTypeByTargetType(attackTargetTypeCombo.currentIndex)
+                                        
+                                        if (currentMode === "SINGLE") {
+                                            // SINGLE模式：只导出当前选中的车辆
+                                            jsonData = attackDataModel.exportToJSONByMode("SINGLE", [], currentConfigVehicle)
+                                        } else if (currentMode === "MULTIPLE") {
+                                            // MULTIPLE模式：导出所有选中的车辆
+                                            var selectedVehiclesList = []
+                                            for (var i = 0; i < vehicleSelectionStates.length; i++) {
+                                                if (vehicleSelectionStates[i] === 1) {
+                                                    selectedVehiclesList.push(vehicleNames[i])
+                                                }
+                                            }
+                                            jsonData = attackDataModel.exportToJSONByMode("MULTIPLE", selectedVehiclesList, "")
+                                        } else {
+                                            // ALL模式：导出所有车辆
+                                            jsonData = attackDataModel.exportToJSONByMode("ALL", [], "")
+                                        }
+                                        
+                                        var jsonString = JSON.stringify(jsonData, null, 2)
+                                        
+                                        // 存储到全局变量中
+                                        globalAttackJsonString = jsonString
+                                        globalAttackJsonData = jsonData
+                                        
+                                        jsonDataPopup.jsonText = jsonString
+                                        jsonDataPopup.open()
+                                        
+                                        console.log("导出模式:", currentMode)
+                                        console.log("导出的车辆数量:", jsonData.nodeAttackParameters.length)
+                                        console.log("JSON数据已存储到全局变量")
                                     }
                                 }
                             }
@@ -1271,6 +1807,29 @@ Rectangle {
                             if (checked) {
                                 stopAttackBtn.checked = false
                                 pauseAttackBtn.checked = false
+                                
+                                // 发送攻击JSON数据到服务器
+                                if (globalAttackJsonString !== "") {
+                                    console.log("启动攻击，发送JSON数据到服务器")
+                                    console.log("发送的JSON数据:", globalAttackJsonString)
+                                    
+                                    // 调用SharedNetworkConnection的发送方法
+                                var success = SharedNetworkConnection.sendJsonData(globalAttackJsonString)
+                                    
+                                    if (success) {
+                                        console.log("攻击数据发送成功")
+                                        // 可以在这里添加成功提示
+                                    } else {
+                                        console.log("攻击数据发送失败")
+                                        // 可以在这里添加失败提示
+                                        checked = false // 发送失败时取消选中状态
+                                    }
+                                } else {
+                                    console.log("没有可发送的攻击数据，请先生成攻击参数")
+                                    checked = false // 没有数据时取消选中状态
+                                }
+                            } else {
+                                console.log("停止攻击")
                             }
                         }
                     }
@@ -2317,6 +2876,116 @@ Rectangle {
         
         onCancelClicked: {
             console.log("取消车辆数据设置")
+        }
+    }
+    
+    // JSON数据弹出框
+    FluPopup {
+        id: jsonDataPopup
+        width: 600
+        height: 500
+        
+        property string jsonText: ""
+        
+        Rectangle {
+            anchors.fill: parent
+            color: "#f5f5f5"
+            radius: 8
+            border.color: "#d0d0d0"
+            border.width: 1
+            
+            Column {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
+                
+                // 标题
+                Text {
+                    text: "导出的JSON数据"
+                    font.pixelSize: 18
+                    font.bold: true
+                    color: "#333333"
+                }
+                
+                // JSON文本显示区域
+                Rectangle {
+                    width: parent.width
+                    height: parent.height - 100
+                    color: "#ffffff"
+                    border.color: "#cccccc"
+                    border.width: 1
+                    radius: 4
+                    
+                    ScrollView {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        
+                        TextArea {
+                            id: jsonTextArea
+                            text: jsonDataPopup.jsonText
+                            readOnly: true
+                            selectByMouse: true
+                            wrapMode: TextArea.Wrap
+                            font.family: "Consolas, Monaco, monospace"
+                            font.pixelSize: 12
+                            color: "#333333"
+                        }
+                    }
+                }
+                
+                // 按钮区域
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 15
+                    
+                    FluButton {
+                        text: "复制到剪贴板"
+                        width: 120
+                        height: 35
+                        normalColor: "#2d5aa0"
+                        hoverColor: "#3d6bb0"
+                        onClicked: {
+                            if (typeof Qt !== 'undefined' && Qt.application && Qt.application.clipboard) {
+                                Qt.application.clipboard.setText(jsonDataPopup.jsonText)
+                                console.log("JSON数据已复制到剪贴板")
+                            } else {
+                                console.log("剪贴板功能不可用")
+                            }
+                        }
+                    }
+                    
+                    FluButton {
+                        text: "关闭"
+                        width: 80
+                        height: 35
+                        normalColor: "#666666"
+                        hoverColor: "#777777"
+                        onClicked: {
+                            jsonDataPopup.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 监听SharedNetworkConnection的信号
+    Connections {
+        target: SharedNetworkConnection.networkConnection
+        
+        // 监听数据接收信号
+        function onDataReceived(data) {
+            console.log("TechDashboard接收到数据:", data)
+        }
+        
+        // 监听网络连接状态变化
+        function onNetworkConnectionChanged(connected) {
+            console.log("网络连接状态变化:", connected)
+        }
+        
+        // 监听状态变化
+        function onStatusChanged(status) {
+            console.log("网络状态:", status)
         }
     }
 }

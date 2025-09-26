@@ -88,9 +88,29 @@ Rectangle {
                             }
                             
                             Text {
-                                text: "连接状态: " + (connectDataBtn.isConnected ? "已连接" : "未连接")
-                                color: connectDataBtn.isConnected ? "#00ff88" : "#ff6666"
+                                text: "连接状态: " + connectionStatusText
+                                color: connectionStatusColor
                                 font.pixelSize: 15
+                                
+                                property string connectionStatusText: {
+                                    if (SharedNetworkConnection.isConnected) {
+                                        return "已连接"
+                                    } else if (connectDataBtn.isConnecting) {
+                                        return "连接中..."
+                                    } else {
+                                        return "未连接"
+                                    }
+                                }
+                                
+                                property color connectionStatusColor: {
+                                    if (SharedNetworkConnection.isConnected) {
+                                        return "#00ff88"  // 绿色 - 已连接
+                                    } else if (connectDataBtn.isConnecting) {
+                                        return "#ffaa00"  // 橙色 - 连接中
+                                    } else {
+                                        return "#ff6666"  // 红色 - 未连接
+                                    }
+                                }
                             }
                             
                             Text {
@@ -540,6 +560,15 @@ Rectangle {
                                             onClicked: {
                                                 parent.isRunning = !parent.isRunning
                                                 console.log("系统状态:", parent.isRunning ? "运行中" : "已停止")
+                                                
+                                                // 启动系统时自动连接网络
+                                                if (parent.isRunning) {
+                                                    console.log("启动系统，开始连接网络...")
+                                                    SharedNetworkConnection.connectToServer()
+                                                } else {
+                                                    console.log("停止系统，断开网络连接...")
+                                                    SharedNetworkConnection.disconnectFromServer()
+                                                }
                                             }
                                         }
                                     }
@@ -555,6 +584,7 @@ Rectangle {
                                         border.width: 2
                                         
                                         property bool isConnected: false
+                                        property bool isConnecting: false
                                         
                                         Text {
                                             anchors.centerIn: parent
@@ -567,8 +597,15 @@ Rectangle {
                                         MouseArea {
                                             anchors.fill: parent
                                             onClicked: {
-                                                parent.isConnected = !parent.isConnected
-                                                console.log("数据连接状态:", parent.isConnected ? "已连接" : "已断开")
+                                                if (parent.isConnected) {
+                                                    console.log("断开数据连接")
+                                                    parent.isConnecting = false
+                                                    SharedNetworkConnection.disconnectFromServer()
+                                                } else if (!parent.isConnecting) {
+                                                    console.log("连接数据")
+                                                    parent.isConnecting = true
+                                                    SharedNetworkConnection.connectToServer()
+                                                }
                                             }
                                         }
                                     }
@@ -601,7 +638,11 @@ Rectangle {
                                             }
                                             onClicked: {
                                                 console.log("清空数据")
-                                                // 这里可以添加实际的清空数据逻辑
+                                                // 清空rawDataModel中的所有数据
+                                                rawDataModel.clear()
+                                                // 重置数据包计数器
+                                                dataPacketCount = 0
+                                                console.log("已清空所有数据，当前记录数:", rawDataModel.count)
                                             }
                                         }
                                     }
@@ -976,44 +1017,7 @@ Rectangle {
         }
     }
 
-    // 网络连接组件
-    NetworkConnection {
-        id: networkConnection
-        onDataReceived: function(data) {
-            var displayData = data
-            var fullDisplayData = data
-            
-            // 尝试解析并格式化JSON数据
-            try {
-                var jsonObj = JSON.parse(data)
-                // 如果解析成功，重新格式化为带缩进的JSON
-                displayData = JSON.stringify(jsonObj, null, 8)
-                fullDisplayData = displayData
-                
-                // 如果格式化后的数据太长，截取前部分用于预览
-                if (displayData.length > 200) {
-                    displayData = displayData.substring(0, 200) + "..."
-                }
-            } catch (e) {
-                // 如果不是JSON格式，保持原样
-                displayData = data.substring(0, 200)
-                fullDisplayData = data
-            }
-            
-            rawDataModel.append({
-                timestamp: new Date().toLocaleTimeString(),
-                data: displayData,
-                fullData: fullDisplayData
-            })
-            
-            // 限制列表长度，避免内存过度使用
-            if (rawDataModel.count > 1000) {
-                rawDataModel.remove(0, rawDataModel.count - 1000)
-            }
-            
-            dataPacketCount++
-        }
-    }
+
 
     // 原始数据模型
     ListModel {
@@ -1021,9 +1025,59 @@ Rectangle {
     }
 
     // 系统状态属性
-    property bool systemRunning: networkConnection.connected
+    property bool systemRunning: SharedNetworkConnection.isConnected
     property int dataPacketCount: 0
     property string topologyMode: "点对点"
+
+    // 添加数据到模型的函数
+    function addDataToModel(data) {
+        var displayData = data
+        var fullDisplayData = data
+        
+        // 尝试解析并格式化JSON数据
+        try {
+            var jsonObj = JSON.parse(data)
+            // 如果解析成功，重新格式化为带缩进的JSON
+            displayData = JSON.stringify(jsonObj, null, 2)
+            fullDisplayData = displayData
+            
+            // 如果格式化后的数据太长，截取前部分用于预览
+            if (displayData.length > 200) {
+                displayData = displayData.substring(0, 200) + "..."
+            }
+        } catch (e) {
+            // 如果不是JSON格式，保持原样
+            if (data.length > 200) {
+                displayData = data.substring(0, 200) + "..."
+                fullDisplayData = data
+            }
+        }
+        
+        rawDataModel.append({
+            timestamp: new Date().toLocaleTimeString(),
+            data: displayData,
+            fullData: fullDisplayData,
+            id: dataPacketCount + 1
+        })
+        
+        // 限制列表长度，避免内存过度使用
+        if (rawDataModel.count > 1000) {
+            rawDataModel.remove(0, rawDataModel.count - 1000)
+        }
+        
+        dataPacketCount++
+        
+        // 显示新数据提示
+        if (dataListView.header && dataListView.header.showNewData) {
+            dataListView.header.showNewData(
+                data.length.toString(),
+                (dataPacketCount).toString(),
+                new Date().toLocaleTimeString()
+            )
+        }
+        
+        console.log("已添加新数据到模型，当前记录数:", rawDataModel.count)
+    }
 
     // 详情对话框
     Dialog {
@@ -1235,6 +1289,33 @@ Rectangle {
         }
         
         console.log("已添加", sampleData.length, "条示例JSON数据")
+    }
+    
+    // 监听SharedNetworkConnection的信号
+    Connections {
+        target: SharedNetworkConnection.networkConnection
+        
+        // 监听数据接收信号
+        function onDataReceived(data) {
+            console.log("HomePage接收到数据:", data)
+            addDataToModel(data)
+        }
+        
+        // 监听连接状态变化
+        function onNetworkConnectionChanged(connected) {
+            console.log("网络连接状态变化:", connected)
+            // 更新连接按钮状态
+            connectDataBtn.isConnected = connected
+            // 连接成功或失败时，清除连接中状态
+            if (connected || !connected) {
+                connectDataBtn.isConnecting = false
+            }
+        }
+        
+        // 监听状态变化
+        function onStatusChanged(status) {
+            console.log("网络状态:", status)
+        }
     }
 }
 

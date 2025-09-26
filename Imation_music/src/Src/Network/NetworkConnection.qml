@@ -32,7 +32,7 @@ Item {
         
         onConnectionSucceeded: {
             console.log("TCP连接成功")
-            showConnectionDialog("success", "连接成功", "已成功连接到服务器 47.111.21.77:7777")
+            showConnectionDialog("success", "连接成功", "已成功连接到服务器 120.26.31.3:7777")
             debugInfo = "连接成功，等待数据..."
             networkConnectionChanged(true)
             // 通过信号传递状态变化
@@ -82,5 +82,29 @@ Item {
     
     function disconnectFromServer() {
         tcpClient.disconnectFromServer()
+    }
+    
+    // 发送JSON数据的方法，按照服务器端协议格式
+    function sendJsonData(jsonString) {
+        if (!tcpClient.connected) {
+            console.log("无法发送数据：未连接到服务器")
+            showConnectionDialog("error", "发送失败", "请先连接到服务器")
+            return false
+        }
+        
+        try {
+            console.log("准备发送JSON数据:", jsonString)
+            
+            // 直接发送JSON字符串，让服务器处理协议解析
+            // 不再在客户端构造复杂的协议头
+            tcpClient.sendData(jsonString)
+            
+            console.log("JSON数据发送完成")
+            return true
+        } catch (error) {
+            console.log("发送JSON数据时出错:", error)
+            showConnectionDialog("error", "发送失败", "发送数据时出错: " + error)
+            return false
+        }
     }
 }

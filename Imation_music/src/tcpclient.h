@@ -27,7 +27,7 @@ public:
     QString getConnectionStatus() const;
 
     // 可从QML调用的方法
-    Q_INVOKABLE void connectToServer(const QString &host = "47.111.21.77", int port = 7777);
+    Q_INVOKABLE void connectToServer(const QString &host = "120.26.31.3", int port = 7777);
     Q_INVOKABLE void disconnectFromServer();
     Q_INVOKABLE void sendData(const QString &data);
 

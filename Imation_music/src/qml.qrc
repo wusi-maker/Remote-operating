@@ -49,5 +49,7 @@
         <file>Resource/rightelement/icon_car_withe.png</file>
         <file>Resource/rightelement/icon_car_blue.png</file>
         <file>Src/commonUI/VehicleDataPopup.qml</file>
+        <file>Src/style/AttackDataModel.qml</file>
+        <file>Src/style/SharedNetworkConnection.qml</file>
     </qresource>
 </RCC>

@@ -1,2 +1,3 @@
 module style
 singleton Theme 1.0 Theme.qml
+singleton SharedNetworkConnection 1.0 SharedNetworkConnection.qml

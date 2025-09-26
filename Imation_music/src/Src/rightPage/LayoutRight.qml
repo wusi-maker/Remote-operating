@@ -48,7 +48,7 @@ Rectangle {
         showClose: true
         showMinimize: true
         showMaximize: true
-        showStayTop: ture
+        showStayTop: true
         titleVisible: true  // 显示标题
         textColor: Theme.primaryTextColor
         iconSize: 35
