@@ -1,0 +1,82 @@
+{
+  "DataType": "MultiHunterStatus",
+  "timestamp": "2025-12-03T10:18:07.451430",
+  "vehicles": [
+    {
+      "DataType": "hunterStatus",
+      "hunterID": "Car1",
+      "imu": {
+        "orientation": {
+          "x": -8.140105949053084e-06,
+          "y": 0.0013141423479502467,
+          "z": -0.6472817065089526,
+          "w": -0.7622497938806153
+        },
+        "angular_velocity": {
+          "x": -0.00041632959619164467,
+          "y": -0.0005122176371514797,
+          "z": 6.0368445701897144e-05
+        },
+        "linear_acceleration": {
+          "x": -0.0211230106651783,
+          "y": 0.009565136395394802,
+          "z": -9.728740692138672
+        }
+      },
+      "vehicle": {
+        "motor_rpm_avg": 0.0,
+        "steering_angle": 0.0,
+        "linear_velocity": 0.0
+      },
+      "odometry": {
+        "angular_z": 0.0,
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        }
+      },
+      "gps": {
+        "latitude": 0.0,
+        "longitude": 0.0
+      }
+    },
+    {
+      "DataType": "hunterStatus",
+      "hunterID": "Car2",
+      "imu": {
+        "orientation": {
+          "x": 0.008221492774545798,
+          "y": -0.004668959427561483,
+          "z": -0.7537491715006129,
+          "w": -0.6570942098776198
+        },
+        "angular_velocity": {
+          "x": -0.00048646415234543383,
+          "y": 0.002470661886036396,
+          "z": 0.0011724026408046484
+        },
+        "linear_acceleration": {
+          "x": 0.17770276963710785,
+          "y": 0.04173392802476883,
+          "z": -9.757213592529297
+        }
+      },
+      "vehicle": {
+        "motor_rpm_avg": 0.0,
+        "steering_angle": 0.0,
+        "linear_velocity": 0.0
+      },
+      "odometry": {
+        "angular_z": 0.0,
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        }
+      },
+      "gps": {
+        "latitude": 0.0,
+        "longitude": 0.0
+      }
+    }
+  ]
+}

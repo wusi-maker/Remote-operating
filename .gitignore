@@ -1,0 +1,48 @@
+# Build directories
+build/
+bin/
+*.build/
+*.bin/
+
+# Qt Creator files
+*.user
+*.user.*
+*.qbs
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.dSYM/
+*.pdb
+*.ilk
+
+# Translation files (generated)
+*.qm
+
+# Temporary files
+*.tmp
+*.temp
+*.log

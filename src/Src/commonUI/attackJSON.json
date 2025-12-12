@@ -1,0 +1,123 @@
+{
+    "id": "ATK-2023-001",
+    "startTime": "2023-10-15T14:30:00Z",
+    "missionId": "MISSION-ALPHA",
+    "priority": "HIGH",
+    
+    "attackTarget": {
+        "type": "MULTIPLE",                  // SINGLE（单节点）/ MULTIPLE（多节点）/ ALL（所有节点）
+        "selectedNodes": [
+            "Car001",
+            "Car002",
+            "Car003"
+        ]
+    },
+    
+    "nodeAttackParameters": [
+        {
+            "nodeSelection": "Car001",
+            "attackConfiguration": {
+                "attackLinks": {
+                    "selectionMode": "MULTIPLE",     // SINGLE（单链路）/ MULTIPLE（多链路）/ ALL（所有链路）
+                    "selectedLinks": [
+                        ["V001", "V002"],
+                        ["V001", "V004"]
+                    ]
+                },
+                "attackType": "MIXED",               // 攻击类型：DDoS/REPLAY/SPOOFING（欺骗）/MIXED（混合）
+                "attackMethod": "SUSTAINED",         // 攻击手段：SUSTAINED（持续攻击）/ INTERMITTENT（间歇攻击）/ BURST（突发攻击）
+                "attackComposition": {
+                    "spoofingEnabled": 1,            // 欺骗攻击是否启用：0（禁用）/ 1（启用）
+                    "ddosEnabled": 1,                // DDoS攻击是否启用：0（禁用）/ 1（启用）
+                    "replayEnabled": 0               // 重放攻击是否启用：0（禁用）/ 1（启用）
+                }
+            },
+            "attackParameters": {
+                "duration": 3600,                    // 单位：毫秒
+                "frequency": 120,                    // 单位：次/秒
+                "intensity": 85,                     // 强度：0-100
+                "delayInjection": 150,               // 延迟注入：单位：毫秒
+                "expectedPacketLossRatio": 0.7,      // 期望丢包率：0-1（比例）
+                "advancedParameters": {
+                    "packetSize": 1024,              // 数据包大小：字节
+                    "sourceSpoofing": true,          // 是否伪造源IP
+                    "spoofedSources": [              // 伪造的源IP列表
+                        "10.0.0.5", 
+                        "10.0.0.6"
+                    ]
+                }
+            }
+        },
+        {
+            "nodeSelection": "Car002",
+            "attackConfiguration": {
+                "attackLinks": {
+                    "selectionMode": "SINGLE",       // SINGLE（单链路）/ MULTIPLE（多链路）/ ALL（所有链路）
+                    "selectedLinks": [
+                        ["V002", "V003"]
+                    ]
+                },
+                "attackType": "DDoS",                // 攻击类型：DDoS/REPLAY/SPOOFING（欺骗）/MIXED（混合）
+                "attackMethod": "INTERMITTENT",      // 攻击手段：SUSTAINED（持续攻击）/ INTERMITTENT（间歇攻击）/ BURST（突发攻击）
+                "attackComposition": {
+                    "spoofingEnabled": 0,            // 欺骗攻击是否启用：0（禁用）/ 1（启用）
+                    "ddosEnabled": 1,                // DDoS攻击是否启用：0（禁用）/ 1（启用）
+                    "replayEnabled": 0               // 重放攻击是否启用：0（禁用）/ 1（启用）
+                }
+            },
+            "attackParameters": {
+                "duration": 2400,                    // 单位：毫秒
+                "frequency": 100,                    // 单位：次/秒
+                "intensity": 75,                     // 强度：0-100
+                "delayInjection": 200,               // 延迟注入：单位：毫秒
+                "expectedPacketLossRatio": 0.6,      // 期望丢包率：0-1（比例）
+                "advancedParameters": {
+                    "packetSize": 512,               // 数据包大小：字节
+                    "sourceSpoofing": false,         // 是否伪造源IP
+                    "spoofedSources": []             // 伪造的源IP列表
+                }
+            }
+        },
+        {
+            "nodeSelection": "Car003",
+            "attackConfiguration": {
+                "attackLinks": {
+                    "selectionMode": "MULTIPLE",     // SINGLE（单链路）/ MULTIPLE（多链路）/ ALL（所有链路）
+                    "selectedLinks": [
+                        ["V003", "V004"],
+                        ["V003", "V001"]
+                    ]
+                },
+                "attackType": "SPOOFING",            // 攻击类型：DDoS/REPLAY/SPOOFING（欺骗）/MIXED（混合）
+                "attackMethod": "BURST",             // 攻击手段：SUSTAINED（持续攻击）/ INTERMITTENT（间歇攻击）/ BURST（突发攻击）
+                "attackComposition": {
+                    "spoofingEnabled": 1,            // 欺骗攻击是否启用：0（禁用）/ 1（启用）
+                    "ddosEnabled": 0,                // DDoS攻击是否启用：0（禁用）/ 1（启用）
+                    "replayEnabled": 0               // 重放攻击是否启用：0（禁用）/ 1（启用）
+                }
+            },
+            "attackParameters": {
+                "duration": 1800,                    // 单位：毫秒
+                "frequency": 80,                     // 单位：次/秒
+                "intensity": 90,                     // 强度：0-100
+                "delayInjection": 100,               // 延迟注入：单位：毫秒
+                "expectedPacketLossRatio": 0.8,      // 期望丢包率：0-1（比例）
+                "advancedParameters": {
+                    "packetSize": 2048,              // 数据包大小：字节
+                    "sourceSpoofing": true,          // 是否伪造源IP
+                    "spoofedSources": [              // 伪造的源IP列表
+                        "10.0.0.7",
+                        "10.0.0.8",
+                        "10.0.0.9"
+                    ]
+                }
+            }
+        }
+    ],
+    
+    "metadata": {
+        "status": "SCHEDULED",               // 状态：SCHEDULED（已计划）/ RUNNING（运行中）/ STOPPED（已停止）
+        "createdAt": "2023-10-10T09:15:00Z",
+        "lastModified": "2023-10-12T16:45:00Z"
+    }
+}
