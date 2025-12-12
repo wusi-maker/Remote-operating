@@ -228,7 +228,7 @@ Rectangle {
                                 height: 30
                                 color: "#1E1E1E"
                                 
-                                                        // 标题 - 居左
+                                // 标题 - 居左
                                 FluText {
                                     text: "车辆网络拓扑图"
                                     font.pixelSize: 24
@@ -404,7 +404,7 @@ Rectangle {
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
                                             bezierConnections: []
                                         },
                                         "mode2": {
@@ -412,40 +412,40 @@ Rectangle {
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
-                                            bezierConnections: [{from: 2, to: 5}]
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
+                                            bezierConnections: [{from: 5, to: 2}]
                                         },
                                         "mode3": {
                                             positions: [
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
-                                            bezierConnections: [{from: 2, to: 4}]
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
+                                            bezierConnections: [{from: 4, to: 2}]
                                         },
                                         "mode4": {
                                             positions: [
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
-                                            bezierConnections: [{from: 2, to: 4},{from:2,to:5}]
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
+                                            bezierConnections: [{from: 4, to: 2},{from:5,to:2}]
                                         },
                                         "mode5": {
                                             positions: [
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
-                                            bezierConnections: [{from: 2, to: 1}]
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
+                                            bezierConnections: [{from: 1, to: 2}]
                                         },
                                         "mode6": {
                                             positions: [
                                                 {x: topplogyMap.width/6 * 0.3, y: topplogyMap.height*0.6, id: "N"}, {x: topplogyMap.width/6 * 1.3, y: topplogyMap.height*0.6, id: "i+1"}, {x: topplogyMap.width/6 * 2.3, y: topplogyMap.height*0.6, id: "i"},
                                                 {x: topplogyMap.width/6 * 3.3, y: topplogyMap.height*0.6, id: "i-1"}, {x: topplogyMap.width/6 * 4.3, y: topplogyMap.height*0.6, id: "i-2"}, {x: topplogyMap.width/6 * 5.3, y: topplogyMap.height*0.6, id: "0"}
                                             ],
-                                            connections: [{from: 0, to: 1}, {from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 4, to: 5}],
-                                            bezierConnections: [{from: 2, to: 1}, {from: 2, to: 5}]
+                                            connections: [{from: 1, to: 0}, {from: 2, to: 1}, {from: 3, to: 2}, {from: 4, to: 3}, {from: 5, to: 4}],
+                                            bezierConnections: [{from: 1, to: 2}, {from: 5, to: 2}]
                                         },
                                         "mode7": {
                                             positions: [
@@ -566,21 +566,26 @@ Rectangle {
                                         source: "qrc:/qt/qml/FluentUI/Font/FluentIcons.ttf"
                                     }
                                     
-                                    // 绘制箭头，未使用
+                                    // 绘制箭头，避开车辆图标
                                     function drawArrow(ctx, start, end, arrowSize) {
                                         arrowSize = arrowSize || 10
                                         var angle = Math.atan2(end.y - start.y, end.x - start.x)
                                         
+                                        // 调整箭头终点位置，避开车辆图标的不透明圆形（半径25px）
+                                        var backgroundRadius = 35
+                                        var adjustedEndX = end.x - backgroundRadius * Math.cos(angle)
+                                        var adjustedEndY = end.y - backgroundRadius * Math.sin(angle)
+                                        
                                         ctx.beginPath()
-                                        ctx.moveTo(end.x, end.y)
+                                        ctx.moveTo(adjustedEndX, adjustedEndY)
                                         ctx.lineTo(
-                                            end.x - arrowSize * Math.cos(angle - Math.PI/6),
-                                            end.y - arrowSize * Math.sin(angle - Math.PI/6)
+                                            adjustedEndX - arrowSize * Math.cos(angle - Math.PI/6),
+                                            adjustedEndY - arrowSize * Math.sin(angle - Math.PI/6)
                                         )
-                                        ctx.moveTo(end.x, end.y)
+                                        ctx.moveTo(adjustedEndX, adjustedEndY)
                                         ctx.lineTo(
-                                            end.x - arrowSize * Math.cos(angle + Math.PI/6),
-                                            end.y - arrowSize * Math.sin(angle + Math.PI/6)
+                                            adjustedEndX - arrowSize * Math.cos(angle + Math.PI/6),
+                                            adjustedEndY - arrowSize * Math.sin(angle + Math.PI/6)
                                         )
                                         ctx.stroke()
                                     }
@@ -643,16 +648,21 @@ Rectangle {
                                             var dy = 2 * (1 - t) * (controlY - (fromPos.y + 15)) + 2 * t * ((toPos.y + 15) - controlY)
                                             var angle = Math.atan2(dy, dx)
                                             
+                                            // 调整箭头终点位置，避开车辆图标的不透明圆形（半径25px）
+                                            var backgroundRadius = 35
+                                            var adjustedEndX = (toPos.x + 15) - backgroundRadius * Math.cos(angle)
+                                            var adjustedEndY = (toPos.y + 15) - backgroundRadius * Math.sin(angle)
+                                            
                                             ctx.beginPath()
-                                            ctx.moveTo(toPos.x + 15, toPos.y + 15)
+                                            ctx.moveTo(adjustedEndX, adjustedEndY)
                                             ctx.lineTo(
-                                                (toPos.x + 15) - 8 * Math.cos(angle - Math.PI/6),
-                                                (toPos.y + 15) - 8 * Math.sin(angle - Math.PI/6)
+                                                adjustedEndX - 8 * Math.cos(angle - Math.PI/6),
+                                                adjustedEndY - 8 * Math.sin(angle - Math.PI/6)
                                             )
-                                            ctx.moveTo(toPos.x + 15, toPos.y + 15)
+                                            ctx.moveTo(adjustedEndX, adjustedEndY)
                                             ctx.lineTo(
-                                                (toPos.x + 15) - 8 * Math.cos(angle + Math.PI/6),
-                                                (toPos.y + 15) - 8 * Math.sin(angle + Math.PI/6)
+                                                adjustedEndX - 8 * Math.cos(angle + Math.PI/6),
+                                                adjustedEndY - 8 * Math.sin(angle + Math.PI/6)
                                             )
                                             ctx.stroke()
                                         }
@@ -1861,7 +1871,7 @@ Rectangle {
                 }
                 
 
-                // 拓扑模式面板
+                // 粒子交互面板
                 Rectangle {
                     id:splitopanel
                     width: parent.width

@@ -15,18 +15,32 @@
 ### 📊 三大核心页面
 
 #### 1. TechDashboard - 科技感仪表盘
-- 🎨 现代化FluentUI设计风格
+现代化多车辆监控面板，采用FluentUI设计风格，提供8种攻击模式配置和实时网络拓扑可视化
+
+![TechDashboard](examples/TechDashboard.png)
+
+**核心功能：**
 - 📈 多车辆实时监控面板
-- ⚡ 8种攻击模式参数配置
+- ⚡ 网络攻击模式参数配置
 - 🌐 Canvas绘制的网络拓扑图
 
-#### 2. HomePage - 车辆数据管理中心
+#### 2. HomePage - 智能车辆监控系统
+车辆数据管理中心，集成网络拓扑可视化、实时数据处理和状态监控功能
+
+![HomePage](examples/Homepage.png)
+
+**核心功能：**
 - 📋 车辆网络拓扑可视化
 - 📊 实时数据更新和预处理
 - 🎯 车辆状态监控面板
 - 📑 结构化数据表格展示
 
 #### 3. LayoutRight - 综合信息显示
+集成化信息展示平台，融合地图定位、视频监控和用户管理功能
+
+![LayoutRight](examples/LayoutRight.png)
+
+**核心功能：**
 - 🗺️ Qt Location地图集成
 - 📹 视频监控区域
 - 📊 车辆仪表盘显示
@@ -61,8 +75,8 @@
 ### 构建步骤
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/smart-vehicle-monitoring.git
-cd smart-vehicle-monitoring
+git clone https://github.com/wusi-maker/Remote-operating.git
+cd Remote-operating
 
 # 创建构建目录
 mkdir build && cd build
@@ -89,7 +103,7 @@ cmake -G "Unix Makefiles" ..
 ## 📁 项目结构
 
 ```
-smart-vehicle-monitoring/
+Remote-operating/
 ├── src/                    # 源代码目录
 │   ├── main.cpp           # 应用入口
 │   ├── main.qml           # 主QML文件
@@ -109,43 +123,35 @@ smart-vehicle-monitoring/
 └── .gitignore            # Git忽略规则
 ```
 
-## 🌍 国际化支持
-
-项目支持中英文双语切换：
-- 使用 `tr()` 函数进行C++代码国际化
-- 使用 `qsTr()` 函数进行QML代码国际化
-- 自动翻译更新脚本支持
-
-### 更新翻译
-```bash
-# 更新翻译文件
-# 执行 Qt Creator 中的 "Script-UpdateTranslations"
-```
-
-## 📸 截图展示
-
-*运行应用后，在 `docs/screenshots/` 目录下查看实际截图*
-
 ## 📝 开发文档
 
 详细开发文档请查看 [docs/README.md](docs/README.md)
 
 博客写作指南请查看 [docs/blog-guide.md](docs/blog-guide.md)
 
-## 🤝 贡献指南
+## 🤝 参与贡献
 
-1. Fork 本项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
+我们欢迎所有形式的贡献，无论是代码、文档、测试还是建议。如果您有好的想法或发现了问题，请随时参与：
 
-## 🐛 问题反馈
+1. **Fork 项目** - 从主分支创建您的副本
+2. **创建分支** - (`git checkout -b feature/AmazingFeature`)
+3. **提交更改** - (`git commit -m 'Add some AmazingFeature'`)
+4. **推送分支** - (`git push origin feature/AmazingFeature`)
+5. **创建PR** - 提交Pull Request并描述您的更改
 
-如果您在使用过程中遇到问题，请：
-1. 查看 [文档](docs/) 中的常见问题
-2. 在 [Issues](https://github.com/your-username/smart-vehicle-monitoring/issues) 中搜索类似问题
-3. 创建新的 Issue 描述您的问题
+## 🐛 问题与建议
+
+您的反馈对我们非常重要！如果您在使用过程中遇到任何问题或有改进建议：
+
+1. **查看文档** - 首先查看[项目文档](docs/)了解常见问题和解决方案
+2. **搜索Issues** - 在[问题列表](https://github.com/wusi-maker/Remote-operating/issues)中搜索类似情况
+3. **创建Issue** - 详细描述您遇到的问题或建议，包括：
+   - 问题描述和复现步骤
+   - 系统环境和版本信息
+   - 错误日志或截图
+   - 期望的行为
+
+我们承诺认真对待每一个反馈，并持续改进项目质量。
 
 ## 📄 许可证
 
@@ -159,9 +165,9 @@ smart-vehicle-monitoring/
 
 ## 📞 联系方式
 
-- 项目维护者: [Your Name]
-- 邮箱: [your.email@example.com]
-- 博客: [your-blog-url]
+- 项目维护者: [wusi-maker](https://github.com/wusi-maker)
+- 邮箱: [1979837154@qq.com]
+- 博客: [wusi-maker.github.io](https://blog.csdn.net/weixin_51626643)
 
 ---
 

@@ -244,7 +244,7 @@ Rectangle {
         height: 1
         color: Theme.progressColor
     }
-        // 主页组件
+    // 主页组件
     HomePage {
         id: homePageComponent
         // 其布局根据页面大小变化
