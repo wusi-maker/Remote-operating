@@ -2,6 +2,9 @@
 #include "VideoStreamDevice.h"
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QFile>
+#include <QStandardPaths>
+#include <QTextStream>
 
 TcpClient::TcpClient(QObject *parent)
     : QObject(parent)
@@ -50,9 +53,58 @@ void TcpClient::connectToServer(const QString &host, int port)
         return;
     }
 
+    // 如果未提供主机和端口，从配置文件读取
+    QString actualHost = host;
+    int actualPort = port;
+    
+    if (actualHost.isEmpty() || actualPort == 0) {
+        // 尝试从配置文件读取
+        QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) 
+                           + "/server_config.yaml";
+        
+        // 如果用户配置目录不存在，尝试项目目录
+        if (!QFile::exists(configPath)) {
+            configPath = "config/server_config.yaml";
+        }
+        
+        QFile configFile(configPath);
+        if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream stream(&configFile);
+            QString line;
+            bool inServerSection = false;
+            
+            while (!stream.atEnd()) {
+                line = stream.readLine().trimmed();
+                
+                if (line.startsWith("server:")) {
+                    inServerSection = true;
+                    continue;
+                }
+                
+                if (inServerSection) {
+                    if (line.startsWith("host:")) {
+                        QString hostValue = line.split(":")[1].trimmed();
+                        hostValue.remove("\"").remove("\"");
+                        if (actualHost.isEmpty()) actualHost = hostValue;
+                    } else if (line.startsWith("port:")) {
+                        QString portValue = line.split(":")[1].trimmed();
+                        if (actualPort == 0) actualPort = portValue.toInt();
+                    } else if (line.startsWith("backup_server:") || line.isEmpty()) {
+                        break; // 结束server section
+                    }
+                }
+            }
+            configFile.close();
+        }
+        
+        // 如果配置文件读取失败，使用默认值
+        if (actualHost.isEmpty()) actualHost = "localhost";
+        if (actualPort == 0) actualPort = 7777;
+    }
+
     setConnectionStatus("连接中...");
-    qDebug() << "Connecting to" << host << ":" << port;
-    m_socket->connectToHost(host, port);
+    qDebug() << "Connecting to" << actualHost << ":" << actualPort;
+    m_socket->connectToHost(actualHost, actualPort);
 }
 
 void TcpClient::disconnectFromServer()

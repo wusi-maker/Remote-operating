@@ -46,3 +46,8 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+
+# Configuration files (contain sensitive information)
+config/server_config.yaml
+config/*.yaml
+!config/server_config.example.yaml
