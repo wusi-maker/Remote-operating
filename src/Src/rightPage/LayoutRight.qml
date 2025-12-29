@@ -767,12 +767,222 @@ Rectangle {
             border.color: Theme.checkedIconColor
             border.width: 0
             
-            // 数据列表
+            property bool showRawList: false
+            property int maxPoints: 100
+            property var labels: []
+            property var gyroX: []
+            property var gyroY: []
+            property var gyroZ: []
+            property var accX: []
+            property var accY: []
+            property var accZ: []
+            property var speed: []
+            property var steering: []
+            property var rearRpm: []
+
+            function toPointList(values) {
+                var pts = []
+                if (!values) return pts
+                for (var i = 0; i < values.length; i++) {
+                    pts.push({x: i, y: values[i]})
+                }
+                return pts
+            }
+            
+            Timer {
+                id: seriesTimer
+                interval: 50
+                running: true
+                repeat: true
+                onTriggered: {
+                    var t = bottomRightRect.labels.length
+                    bottomRightRect.labels = bottomRightRect.labels.concat([t])
+                    var vdm = rightrect.currentVehicleDataModel
+                    var gx = vdm ? vdm.imu.angular_velocity.x : 0
+                    var gy = vdm ? vdm.imu.angular_velocity.y : 0
+                    var gz = vdm ? vdm.imu.angular_velocity.z : 0
+                    var ax = vdm ? vdm.imu.linear_acceleration.x : 0
+                    var ay = vdm ? vdm.imu.linear_acceleration.y : 0
+                    var az = vdm ? vdm.imu.linear_acceleration.z : 0
+                    var spd = vdm ? vdm.vehicle.linear_velocity : 0
+                    var str = vdm ? vdm.vehicle.steering_angle : 0
+                    var rpm = vdm ? vdm.vehicle.motor_rpm_avg : 0
+                    
+                    bottomRightRect.gyroX = bottomRightRect.gyroX.concat([gx])
+                    bottomRightRect.gyroY = bottomRightRect.gyroY.concat([gy])
+                    bottomRightRect.gyroZ = bottomRightRect.gyroZ.concat([gz])
+                    bottomRightRect.accX = bottomRightRect.accX.concat([ax])
+                    bottomRightRect.accY = bottomRightRect.accY.concat([ay])
+                    bottomRightRect.accZ = bottomRightRect.accZ.concat([az])
+                    bottomRightRect.speed = bottomRightRect.speed.concat([spd])
+                    bottomRightRect.steering = bottomRightRect.steering.concat([str])
+                    bottomRightRect.rearRpm = bottomRightRect.rearRpm.concat([rpm])
+                    
+                    if (bottomRightRect.labels.length > bottomRightRect.maxPoints) {
+                        bottomRightRect.labels = bottomRightRect.labels.slice(bottomRightRect.labels.length - bottomRightRect.maxPoints)
+                        bottomRightRect.gyroX = bottomRightRect.gyroX.slice(bottomRightRect.gyroX.length - bottomRightRect.maxPoints)
+                        bottomRightRect.gyroY = bottomRightRect.gyroY.slice(bottomRightRect.gyroY.length - bottomRightRect.maxPoints)
+                        bottomRightRect.gyroZ = bottomRightRect.gyroZ.slice(bottomRightRect.gyroZ.length - bottomRightRect.maxPoints)
+                        bottomRightRect.accX = bottomRightRect.accX.slice(bottomRightRect.accX.length - bottomRightRect.maxPoints)
+                        bottomRightRect.accY = bottomRightRect.accY.slice(bottomRightRect.accY.length - bottomRightRect.maxPoints)
+                        bottomRightRect.accZ = bottomRightRect.accZ.slice(bottomRightRect.accZ.length - bottomRightRect.maxPoints)
+                        bottomRightRect.speed = bottomRightRect.speed.slice(bottomRightRect.speed.length - bottomRightRect.maxPoints)
+                        bottomRightRect.steering = bottomRightRect.steering.slice(bottomRightRect.steering.length - bottomRightRect.maxPoints)
+                        bottomRightRect.rearRpm = bottomRightRect.rearRpm.slice(bottomRightRect.rearRpm.length - bottomRightRect.maxPoints)
+                    }
+                }
+            }
+            
+            Column {
+                id: chartsColumn
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 10
+                visible: !bottomRightRect.showRawList
+                
+                Row {
+                    spacing: 10
+                    width: parent.width
+                    height: (parent.height - parent.spacing) * 0.5
+                    
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        color: "transparent"
+                        border.width: 0
+                        radius: 8
+
+                        CurveComponent {
+                            anchors.fill: parent
+                            chartTitle: "IMU角速度 (x, y, z)"
+                            xAxisLabel: "时间"
+                            yAxisLabel: "角速度"
+                            showSineWave: false
+                            curveType: "line"
+                            autoScaleY: true
+                            showTitle: true
+                            showAxisLabels: true
+                            showTicks: false
+                            plotMargin: 16
+                            plotTopMargin: 25
+                            maxDataPoints: bottomRightRect.maxPoints
+                            maxMemoryDataPoints: bottomRightRect.maxPoints
+                            showLegend: true
+                            legendPosition: "topRight"
+                            curves: [
+                                {name: "wx", color: "#1f77b4", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.gyroX)},
+                                {name: "wy", color: "#ff7f0e", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.gyroY)},
+                                {name: "wz", color: "#2ca02c", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.gyroZ)}
+                            ]
+                        }
+                    }
+                    
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        color: "transparent"
+                        border.width: 0
+                        radius: 8
+
+                        CurveComponent {
+                            anchors.fill: parent
+                            chartTitle: "IMU角加速度 (x, y, z)"
+                            xAxisLabel: "时间"
+                            yAxisLabel: "角加速度"
+                            showSineWave: false
+                            curveType: "line"
+                            autoScaleY: true
+                            showTitle: true
+                            showAxisLabels: false
+                            showTicks: false
+                            plotMargin: 16
+                            plotTopMargin: 25
+                            maxDataPoints: bottomRightRect.maxPoints
+                            maxMemoryDataPoints: bottomRightRect.maxPoints
+                            showLegend: true
+                            legendPosition: "topRight"
+                            curves: [
+                                {name: "ax", color: "#d62728", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.accX)},
+                                {name: "ay", color: "#9467bd", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.accY)},
+                                {name: "az", color: "#8c564b", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.accZ)}
+                            ]
+                        }
+                    }
+                }
+                
+                Row {
+                    spacing: 10
+                    width: parent.width
+                    height: (parent.height - parent.spacing) * 0.5
+                    
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        color: "transparent"
+                        border.width: 0
+                        radius: 8
+
+                        CurveComponent {
+                            anchors.fill: parent
+                            chartTitle: "车速与转向角"
+                            xAxisLabel: "时间"
+                            yAxisLabel: "数值"
+                            showSineWave: false
+                            curveType: "line"
+                            autoScaleY: true
+                            showTitle: true
+                            showAxisLabels: false
+                            showTicks: false
+                            plotMargin: 16
+                            plotTopMargin: 25
+                            maxDataPoints: bottomRightRect.maxPoints
+                            maxMemoryDataPoints: bottomRightRect.maxPoints
+                            showLegend: true
+                            legendPosition: "topRight"
+                            curves: [
+                                {name: "speed", color: "#17becf", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.speed)},
+                                {name: "steering", color: "#bcbd22", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.steering)}
+                            ]
+                        }
+                    }
+                    
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        color: "transparent"
+                        border.width: 0
+                        radius: 8
+
+                        CurveComponent {
+                            anchors.fill: parent
+                            chartTitle: "后轮转速"
+                            xAxisLabel: "时间"
+                            yAxisLabel: "RPM"
+                            showSineWave: false
+                            curveType: "line"
+                            autoScaleY: true
+                            showTitle: true
+                            showAxisLabels: false
+                            showTicks: false
+                            plotMargin: 16
+                            plotTopMargin: 25
+                            maxDataPoints: bottomRightRect.maxPoints
+                            maxMemoryDataPoints: bottomRightRect.maxPoints
+                            showLegend: true
+                            legendPosition: "topRight"
+                            curves: [
+                                {name: "rpm", color: "#7f7f7f", width: 2, type: "line", data: bottomRightRect.toPointList(bottomRightRect.rearRpm)}
+                            ]
+                        }
+                    }
+                }
+            }
+            
             DataListView {
                 id: dataListView
                 anchors.fill: parent
                 anchors.margins: 10
-                anchors.bottomMargin: 120  // 为底部按钮留出空间
+                visible: bottomRightRect.showRawList
                 dataModel: rightrect.getCurrentVehicleDetailData()
             }
             
@@ -782,6 +992,8 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottomMargin: 15
                 spacing: 30
+                z: 10
+                opacity: 0
                 
                 // 刷新数据按钮
                 Rectangle {
@@ -794,7 +1006,7 @@ Rectangle {
                     
                     Text {
                         anchors.centerIn: parent
-                        text: "刷新数据"
+                        text: "原始数据"
                         color: "black"
                         font.pixelSize: 20
                         font.bold: true
@@ -809,6 +1021,7 @@ Rectangle {
                             console.log("数据绑定已生效，当前车辆:", rightrect.currentVehicleId)
                             // 打印当前车辆的详细数据
                             rightrect.printCurrentVehicleData()
+                            bottomRightRect.showRawList = !bottomRightRect.showRawList
                         }
                         onPressed: {
                             parent.color = Qt.darker(Theme.labledBackColor, 1.2)

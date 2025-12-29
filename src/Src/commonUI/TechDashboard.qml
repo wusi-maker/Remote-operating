@@ -48,8 +48,25 @@ Rectangle {
     
     // 多车辆攻击配置相关属性
     property var selectedVehicles: attackDataModel.attackTarget.selectedNodes
+    
+    // 兼容性属性映射（替代被删除的ID，指向新的控件）
+    property var attackTargetTypeCombo: attackTargetTypeCombo2
+    property var currentVehicleTitle: currentVehicleTitle2
+    property var currentVehicleCombo: currentVehicleCombo2
+    property var vehicleSelectionArea: vehicleSelectionArea2
+    property var mixedAttackSelectionArea: null // 混合攻击选择区域引用，将在UI组件中设置
+    property var attackTypeComboRef: null // 攻击类型下拉框引用
+    property var attackMethodComboRef: null
+    property var durationSliderRef: null
+    property var frequencySliderRef: null
+    property var intensitySliderRef: null
+    property var rangeSliderRef: null
+    property var delaySliderRef: null
+    property var packetLossSliderRef: null
+    property var attackTargetTypeComboRef: null
     property var selectedAttackModes: [] // 将通过attackComposition动态计算
     property string currentConfigVehicle: selectedVehicles.length > 0 ? selectedVehicles[0] : ""
+    property bool isUpdating: false // 防止循环更新
     
     // 从AttackDataModel获取车辆参数的函数
     function getVehicleParameters(vehicleId) {
@@ -131,19 +148,40 @@ Rectangle {
     }
     
     function loadVehicleParameters(vehicleId) {
+        isUpdating = true
         var params = getVehicleParameters(vehicleId)
         
         // 更新UI控件的值
-        if (attackTypeCombo) attackTypeCombo.currentIndex = params.attackType
-        if (attackMethodCombo) attackMethodCombo.currentIndex = params.attackMethod
-        if (durationSlider) durationSlider.value = params.duration
-        if (frequencySlider) frequencySlider.value = params.frequency
-        if (intensitySlider) intensitySlider.value = params.intensity
-        if (rangeSlider) rangeSlider.value = params.range
-        if (delaySlider) delaySlider.value = params.delay
-        if (packetLossSlider) packetLossSlider.value = params.packetLoss
+        if (attackTypeComboRef) attackTypeComboRef.currentIndex = params.attackType
+        if (attackMethodComboRef) attackMethodComboRef.currentIndex = params.attackMethod
+        if (durationSliderRef) durationSliderRef.value = params.duration
+        if (frequencySliderRef) frequencySliderRef.value = params.frequency
+        if (intensitySliderRef) intensitySliderRef.value = params.intensity
+        if (rangeSliderRef) rangeSliderRef.value = params.range
+        if (delaySliderRef) delaySliderRef.value = params.delay
+        if (packetLossSliderRef) packetLossSliderRef.value = params.packetLoss
+
         
         currentConfigVehicle = vehicleId
+        
+        var nodeParams = attackDataModel.getNodeAttackParameters(vehicleId)
+        if (nodeParams && nodeParams.attackComposition) {
+            syncCheckboxes(
+                nodeParams.attackComposition.ddosEnabled === true,
+                nodeParams.attackComposition.replayEnabled === true,
+                nodeParams.attackComposition.spoofingEnabled === true
+            )
+        }
+        isUpdating = false
+    }
+    
+    // 根据攻击组成获取启用的攻击类型数组
+    function getEnabledAttackTypesFromComposition(composition) {
+        var enabledTypes = []
+        if (composition.ddosEnabled) enabledTypes.push("DDoS")
+        if (composition.replayEnabled) enabledTypes.push("REPLAY")
+        if (composition.spoofingEnabled) enabledTypes.push("SPOOFING")
+        return enabledTypes
     }
     
     function saveCurrentVehicleParameters() {
@@ -156,14 +194,14 @@ Rectangle {
         
         // 获取当前UI控件的值
         var newParams = {
-            attackType: attackTypeCombo ? attackTypeCombo.currentIndex : 0,
-            attackMethod: attackMethodCombo ? attackMethodCombo.currentIndex : 0,
-            duration: durationSlider ? durationSlider.value : 60,
-            frequency: frequencySlider ? frequencySlider.value : 10,
-            intensity: intensitySlider ? intensitySlider.value : 5,
-            range: rangeSlider ? rangeSlider.value : 50,
-            delay: delaySlider ? delaySlider.value : 100,
-            packetLoss: packetLossSlider ? packetLossSlider.value : 5
+            attackType: attackTypeComboRef ? attackTypeComboRef.currentIndex : 0,
+            attackMethod: attackMethodComboRef ? attackMethodComboRef.currentIndex : 0,
+            duration: durationSliderRef ? durationSliderRef.value : 60,
+            frequency: frequencySliderRef ? frequencySliderRef.value : 10,
+            intensity: intensitySliderRef ? intensitySliderRef.value : 5,
+            range: rangeSliderRef ? rangeSliderRef.value : 50,
+            delay: delaySliderRef ? delaySliderRef.value : 100,
+            packetLoss: packetLossSliderRef ? packetLossSliderRef.value : 5
         }
         
         console.log("saveCurrentVehicleParameters: newParams =", JSON.stringify(newParams))
@@ -247,162 +285,92 @@ Rectangle {
         for (var i = 0; i < attackDataModel.nodeAttackParameters.count; i++) {
             var item = attackDataModel.nodeAttackParameters.get(i);
             if (vehicleSelectionStates[i] === 1) { // 只更新选中的车辆
+                var currentAttackParams = item.attackParameters || {}
+                var newAttackParams = {
+                    "duration": currentAttackParams.duration !== undefined ? currentAttackParams.duration : 60,
+                    "frequency": currentAttackParams.frequency !== undefined ? currentAttackParams.frequency : 10,
+                    "intensity": currentAttackParams.intensity !== undefined ? currentAttackParams.intensity : 5,
+                    "delayInjection": currentAttackParams.delayInjection !== undefined ? currentAttackParams.delayInjection : 100,
+                    "expectedPacketLossRatio": currentAttackParams.expectedPacketLossRatio !== undefined ? currentAttackParams.expectedPacketLossRatio : 0.05
+                }
+                
                 switch(paramName) {
                     case "duration":
-                        item.attackParameters.duration = value
+                        newAttackParams.duration = value
                         break
                     case "frequency":
-                        item.attackParameters.frequency = value
+                        newAttackParams.frequency = value
                         break
                     case "intensity":
-                        item.attackParameters.intensity = value
+                        newAttackParams.intensity = value
                         break
                     case "range":
-                        // range不在attackParameters中，可能需要特殊处理
                         break
                     case "delay":
-                        item.attackParameters.delayInjection = value
+                    case "delayInjection":
+                        newAttackParams.delayInjection = value
                         break
                     case "packetLoss":
-                        item.attackParameters.expectedPacketLossRatio = value / 100
+                        newAttackParams.expectedPacketLossRatio = value / 100
+                        break
+                    case "expectedPacketLossRatio":
+                        newAttackParams.expectedPacketLossRatio = value
                         break
                 }
-            }
-        }
-    }
-    
-    function updateSelectedAttackModes() {
-        var selected = []
-        var attackModes = ["DDoS攻击", "重放攻击", "欺骗攻击"]
-        
-        // 从AttackDataModel获取当前车辆的攻击组成信息
-        if (currentConfigVehicle) {
-            var nodeParams = attackDataModel.getNodeAttackParameters(currentConfigVehicle)
-            if (nodeParams && nodeParams.attackComposition) {
-                var composition = nodeParams.attackComposition
                 
-                // 根据attackComposition确定选中的攻击模式
-                if (composition.ddosEnabled) {
-                    selected.push("DDoS攻击")
-                }
-                if (composition.replayEnabled) {
-                    selected.push("重放攻击")
-                }
-                if (composition.spoofingEnabled) {
-                    selected.push("欺骗攻击")
-                }
+                attackDataModel.updateNodeAttackParameter(item.nodeSelection, "attackParameters", newAttackParams)
             }
         }
-        
-        selectedAttackModes = selected
-        
-        // 更新UI中的复选框状态
-        if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
-            var column = mixedAttackSelectionArea.children[0]
-            if (column && column.children && column.children.length > 0) {
-                for (var i = 0; i < column.children.length && i < attackModes.length; i++) {
-                    var checkbox = column.children[i]
-                    if (checkbox && checkbox.text && checkbox.checked !== undefined) {
-                        checkbox.checked = selected.indexOf(attackModes[i]) !== -1
-                    }
-                }
-            }
-        }
-        
-        // 根据选中的攻击模式更新攻击类型下拉框
-        if (attackTypeCombo) {
-            if (selected.length === 0) {
-                // 没有选中任何攻击模式，保持当前下拉框状态
-            } else if (selected.length === 1) {
-                // 选中单个攻击模式，下拉框显示对应类型
-                var singleAttackIndex = attackModes.indexOf(selected[0])
-                if (singleAttackIndex !== -1) {
-                    attackTypeCombo.currentIndex = singleAttackIndex
-                }
-            } else {
-                // 选中多个攻击模式，下拉框显示混合攻击
-                attackTypeCombo.currentIndex = 3 // 混合攻击是第4个选项（索引3）
-            }
-        }
-        
-        console.log("选中的攻击模式:", selected)
     }
     
-    // 处理攻击类型下拉框选择变化
-    function updateAttackTypeSelection(selectedIndex) {
-        var attackModes = ["DDoS攻击", "重放攻击", "欺骗攻击"]
+    // 简化的复选框同步函数
+    function syncCheckboxes(ddos, replay, spoofing) {
+        if (!mixedAttackSelectionArea || !mixedAttackSelectionArea.children) return
+        var column = mixedAttackSelectionArea.children[0]
+        if (!column || !column.children) return
         
-        if (!currentConfigVehicle) return
+        isUpdating = true
+        // 假设顺序是 DDoS, Replay, Spoofing
+        if (column.children.length > 0) column.children[0].checked = ddos
+        if (column.children.length > 1) column.children[1].checked = replay
+        if (column.children.length > 2) column.children[2].checked = spoofing
+        isUpdating = false
+    }
+
+    // 根据复选框状态更新下拉框
+    function updateAttackTypeFromCheckboxes() {
+        if (isUpdating || !currentConfigVehicle) return
         
-        // 更新AttackDataModel中的攻击组成
-        var composition = {
-            ddosEnabled: false,
-            replayEnabled: false,
-            spoofingEnabled: false
-        }
+        var nodeParams = attackDataModel.getNodeAttackParameters(currentConfigVehicle)
+        if (!nodeParams || !nodeParams.attackComposition) return
         
-        if (selectedIndex >= 0 && selectedIndex < 3) {
-            // 选择了具体的攻击类型，只启用对应的攻击模式
-            switch(selectedIndex) {
-                case 0: composition.ddosEnabled = true; break
-                case 1: composition.replayEnabled = true; break
-                case 2: composition.spoofingEnabled = true; break
-            }
-        } else if (selectedIndex === 3) {
-            // 选择了混合攻击，检查当前复选框状态
-            if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
-                var column = mixedAttackSelectionArea.children[0]
-                if (column && column.children && column.children.length > 0) {
-                    var hasChecked = false
-                    for (var j = 0; j < column.children.length && j < attackModes.length; j++) {
-                        var cb = column.children[j]
-                        if (cb && cb.text && cb.checked !== undefined && cb.checked) {
-                            hasChecked = true
-                            switch(j) {
-                                case 0: composition.ddosEnabled = true; break
-                                case 1: composition.replayEnabled = true; break
-                                case 2: composition.spoofingEnabled = true; break
-                            }
-                        }
-                    }
-                    
-                    if (!hasChecked) {
-                        // 默认选中前两个
-                        composition.ddosEnabled = true
-                        composition.replayEnabled = true
-                        for (var k = 0; k < Math.min(2, column.children.length, attackModes.length); k++) {
-                            var defaultCb = column.children[k]
-                            if (defaultCb && defaultCb.text && defaultCb.checked !== undefined) {
-                                defaultCb.checked = true
-                            }
-                        }
-                    }
+        var comp = nodeParams.attackComposition
+        var count = 0
+        if (comp.ddosEnabled) count++
+        if (comp.replayEnabled) count++
+        if (comp.spoofingEnabled) count++
+        
+        isUpdating = true
+        if (attackTypeComboRef) {
+            if (count > 1) {
+                if (attackTypeComboRef.currentIndex !== 3) {
+                    attackTypeComboRef.currentIndex = 3 // 混合攻击
+                    attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackType", "MIXED")
+                }
+            } else if (count === 1) {
+                var targetIndex = -1
+                if (comp.ddosEnabled) targetIndex = 0
+                else if (comp.replayEnabled) targetIndex = 1
+                else if (comp.spoofingEnabled) targetIndex = 2
+                
+                if (targetIndex !== -1 && attackTypeComboRef.currentIndex !== targetIndex) {
+                    attackTypeComboRef.currentIndex = targetIndex
+                    var typeStrs = ["DDoS", "REPLAY", "SPOOFING"]
+                    attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackType", typeStrs[targetIndex])
                 }
             }
         }
-        
-        // 更新AttackDataModel中的攻击组成
-        attackDataModel.updateNodeAttackParameter(currentConfigVehicle, "attackComposition", composition)
-        
-        // 更新UI中的复选框状态
-        if (mixedAttackSelectionArea && mixedAttackSelectionArea.children.length > 0) {
-            var column = mixedAttackSelectionArea.children[0]
-            if (column && column.children && column.children.length > 0) {
-                for (var i = 0; i < column.children.length && i < attackModes.length; i++) {
-                    var checkbox = column.children[i]
-                    if (checkbox && checkbox.text && checkbox.checked !== undefined) {
-                        switch(i) {
-                            case 0: checkbox.checked = composition.ddosEnabled; break
-                            case 1: checkbox.checked = composition.replayEnabled; break
-                            case 2: checkbox.checked = composition.spoofingEnabled; break
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 更新selectedAttackModes属性
-        updateSelectedAttackModes()
+        isUpdating = false
     }
 
     
@@ -536,8 +504,21 @@ Rectangle {
                             border.color: "#555555"
                             border.width: 1
                             radius: 8
+                            
+                            Component.onCompleted: {
+                                techDashboard.mixedAttackSelectionArea = mixedAttackSelectionArea
+                                attackTypeComboRef = attackTypeCombo
+                                attackTargetTypeComboRef = attackTargetTypeCombo
+                                attackMethodComboRef = attackMethodCombo
+                                durationSliderRef = durationSlider
+                                frequencySliderRef = frequencySlider
+                                intensitySliderRef = intensitySlider
+                                rangeSliderRef = rangeSlider
+                                delaySliderRef = delaySlider
+                                packetLossSliderRef = packetLossSlider
+                            }
                                 
-                                Flickable {
+                            Flickable {
                                     id: attackConfigFlickable
                                     anchors.fill: parent
                                     anchors.margins: 12
@@ -558,9 +539,7 @@ Rectangle {
                                         Column {
                                             width: parent.width
                                             spacing: 8
-                                            
-                                        
-                                            
+
                                             // 攻击目标类型选择
                                             Row {
                                                 width: parent.width
@@ -577,177 +556,10 @@ Rectangle {
                                                     width: parent.width - 70 - 140 - 180
                                                     height: 35
                                                 }
-                                                Text {
-                                                    text: "攻击目标:"
-                                                    color: "#ffffff"
-                                                    font.pixelSize: 13
-                                                    width: 70
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                }
-                                                
-                                                FluComboBox {
-                                                    id: attackTargetTypeCombo
-                                                    width: 190
-                                                    model: ["SINGLE", "MULTIPLE", "ALL"]
-                                                    currentIndex: 0
-                                                    onCurrentIndexChanged: {
-                                                        if (currentIndex === 1) { // MULTIPLE
-                                                            vehicleSelectionArea.visible = true
-                                                            currentVehicleTitle.visible = true
-                                                        }else if(currentIndex===2) { // ALL
-                                                            vehicleSelectionArea.visible = true
-                                                            currentVehicleTitle.visible = true
-                                                            // 在ALL模式下，选中所有车辆
-                                                            for (var i = 0; i < vehicleSelectionArea.children[0].children[1].children[0].count; i++) {
-                                                                var checkbox = vehicleSelectionArea.children[0].children[1].children[0].itemAt(i)
-                                                                if (checkbox) {
-                                                                    checkbox.checked = true
-                                                                }
-                                                            }
-                                                        }
-                                                        else {
-                                                            vehicleSelectionArea.visible = false
-                                                            currentVehicleTitle.visible = true  // 默认开启，因为无论是单个车辆还是所有车辆都需要选择设置的车辆编号
-                                                        }
-                                                    }
-                                                }
-                                                
                                             
                                             }
                                             
-                                            // 车辆选择区域（仅在MULTIPLE模式下显示）
-                                            Rectangle {
-                                                id: vehicleSelectionArea
-                                                width: parent.width-10
-                                                anchors.left: parent.left
-                                                height: visible ? 80 : 0
-                                                color: "#2a2a2a"
-                                                border.color: "#555555"
-                                                border.width: 1
-                                                radius: 4
-                                                visible: false
-                                                
-                                                Column {
-                                                    anchors.fill: parent
-                                                    anchors.margins: 8
-                                                    spacing: 8
-                                                    
-                                                    Text {
-                                                        text: "选择攻击车辆节点:"
-                                                        color: "#00ffff"
-                                                        font.pixelSize: 12
-                                                        font.bold: true
-                                                    }
-                                                    
-                                                    Flow {
-                                                        width: parent.width
-                                                        spacing: 8
-                                                        anchors.horizontalCenter: parent.horizontalCenter
-                                                        
-                                                        Repeater {
-                                                            model: vehicleNames
-                                                            
-                                                            FluCheckBox {
-                                                                text: modelData
-                                                                // 当选择为ALL的时候直接将状态数组设置为全一
-                                                                checked: attackTargetTypeCombo.currentIndex === 2 ? true : (vehicleSelectionStates[index] === 1) // ALL模式下全选，否则根据状态数组
-                                                                enabled: attackTargetTypeCombo.currentIndex !== 2 // 在ALL模式下禁用
-                                                                onCheckedChanged: {
-                                                                    // 在ALL模式下不允许取消勾选
-                                                                    if (attackTargetTypeCombo.currentIndex === 2 && !checked) {
-                                                                        checked = true
-                                                                        return
-                                                                    }
-                                                                    
-                                                                    // 更新车辆选择状态
-                                                                    var newStates = vehicleSelectionStates.slice() // 复制数组
-                                                                    newStates[index] = checked ? 1 : 0
-                                                                    vehicleSelectionStates = newStates
-                                                                    
-                                                                    // 重新计算globalVehicleNames
-                                                                    var result = []
-                                                                    for (var i = 0; i < vehicleNames.length; i++) {
-                                                                        if (vehicleSelectionStates[i] === 1) {
-                                                                            result.push(vehicleNames[i])
-                                                                        }
-                                                                    }
-                                                                    globalVehicleNames = result
-                                                                    
-                                                                    // 更新选中的车辆列表
-                                                                    updateSelectedVehicles()
-                                                                    
-                                                                    // 如果当前车辆被取消选择，切换到第一个选中的车辆
-                                                                    if (!checked && currentConfigVehicle === modelData) {
-                                                                        var firstSelected = ""
-                                                                        for (var j = 0; j < vehicleNames.length; j++) {
-                                                                            if (vehicleSelectionStates[j] === 1) {
-                                                                                firstSelected = vehicleNames[j]
-                                                                                break
-                                                                            }
-                                                                        }
-                                                                        if (firstSelected !== "") {
-                                                                            loadVehicleParameters(firstSelected)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    // 如果是新选中的车辆且当前没有配置车辆，设为当前配置车辆
-                                                                    if (checked && currentConfigVehicle === "") {
-                                                                        loadVehicleParameters(modelData)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            
-                                            // 当前配置车辆标题
-                                            Rectangle {
-                                                id: currentVehicleTitle
-                                                width: parent.width-10
-                                                anchors.left: parent.left
-                                                height: visible ? 35 : 0
-                                                color: "#333333"
-                                                border.color: "#00ffff"
-                                                border.width: 1
-                                                radius: 4
-                                                visible: true
-                                                
-                                                Row {
-                                                    anchors.centerIn: parent
-                                                    spacing: 10
-                                                    
-                                                    Text {
-                                                        text: "当前配置车辆:"
-                                                        color: "#ffffff"
-                                                        font.pixelSize: 13
-                                                        font.bold:true
-                                                        anchors.verticalCenter: parent.verticalCenter
-                                                    }
-                                                    
-                                                    FluComboBox {
-                                                        id: currentVehicleCombo
-                                                        width: 120
-                                                        model: selectedVehicles
-                                                        currentIndex: 0
-                                                        onCurrentIndexChanged: {
-                                                            // 切换车辆时加载对应的参数配置
-                                                            if (model.length > 0 && currentIndex >= 0) {
-                                                                loadVehicleParameters(model[currentIndex])
-                                                            }
-                                                        }
-                                                    }
-                                                    
-                                                    Text {
-                                                        text: "的攻击参数"
-                                                        color: "#ffffff"
-                                                        font.pixelSize: 13
-                                                        font.bold: true
-                                                        anchors.verticalCenter: parent.verticalCenter
-                                                    }
-                                                }
-                                            }
-                                            
+
                                             // 攻击类型和方式水平布局
                                             Row {
                                                 width: parent.width
@@ -776,15 +588,20 @@ Rectangle {
                                                             width: 140
                                                             model: ["DDoS攻击", "重放攻击","欺骗攻击" , "混合攻击" ]
                                                             currentIndex: 0
+                                                            
+                                                            Component.onCompleted: {
+                                                                techDashboard.attackTypeComboRef = attackTypeCombo
+                                                            }
+                                                            
                                                             onCurrentIndexChanged: {
-                                                                if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                                    saveCurrentVehicleParameters()
-                                                                }
-                                                                // 控制混合攻击模式选择区域的显示
-                                                                mixedAttackSelectionArea.visible = true // 混合攻击是第4个选项（索引3）
+                                                                if (isUpdating) return
+                                                                saveCurrentVehicleParameters()
                                                                 
-                                                                // 调用函数处理下拉框选择变化
-                                                                updateAttackTypeSelection(currentIndex)
+                                                                // Sync checkboxes based on selection
+                                                                if (currentIndex === 0) syncCheckboxes(true, false, false)
+                                                                else if (currentIndex === 1) syncCheckboxes(false, true, false)
+                                                                else if (currentIndex === 2) syncCheckboxes(false, false, true)
+                                                                else if (currentIndex === 3) syncCheckboxes(true, true, true)
                                                             }
                                                         }
                                                     }
@@ -799,6 +616,12 @@ Rectangle {
                                                         border.width: 0
                                                         radius: 4
                                                         visible: true
+                                                        
+                                                        Component.onCompleted: {
+                                                            // 设置引用到主组件的mixedAttackSelectionArea属性
+                                                            techDashboard.mixedAttackSelectionArea = mixedAttackSelectionArea
+                                                            console.log("mixedAttackSelectionArea reference set")
+                                                        }
                                                         
                                                         Column {
                                                             // anchors.centerIn: parent
@@ -815,24 +638,34 @@ Rectangle {
                                                                     text: modelData
                                                                     width: 140  // 与攻击类型下拉框保持一致的宽度
                                                                     height: 20  // 设置合适的高度
-                                                                    checked: index < 2 // 默认选中前2个
+                                                                    checked: false
                                                                     onCheckedChanged: {
                                                                         // 更新AttackDataModel中的攻击组合数据
                                                                         var vehicleId = currentConfigVehicle
+                                                                        if (!vehicleId) return
+                                                                        
                                                                         var nodeParam = attackDataModel.getNodeAttackParameters(vehicleId)
-                                                                        if (nodeParam) {
-                                                                            if (index === 0) { // DDoS攻击
-                                                                                nodeParam.attackComposition.ddosEnabled = checked
-                                                                            } else if (index === 1) { // 重放攻击
-                                                                                nodeParam.attackComposition.replayEnabled = checked
-                                                                            } else if (index === 2) { // 欺骗攻击
-                                                                                nodeParam.attackComposition.spoofingEnabled = checked
-                                                                            }
-                                                                            attackDataModel.updateNodeAttackParameter(vehicleId, nodeParam)
+                                                                        if (!nodeParam) return
+                                                                        
+                                                                        var currentComp = nodeParam.attackComposition || {}
+                                                                        var newComp = {
+                                                                            "spoofingEnabled": currentComp.spoofingEnabled === true,
+                                                                            "ddosEnabled": currentComp.ddosEnabled === true,
+                                                                            "replayEnabled": currentComp.replayEnabled === true
                                                                         }
                                                                         
+                                                                        if (index === 0) { // DDoS攻击
+                                                                            newComp.ddosEnabled = checked
+                                                                        } else if (index === 1) { // 重放攻击
+                                                                            newComp.replayEnabled = checked
+                                                                        } else if (index === 2) { // 欺骗攻击
+                                                                            newComp.spoofingEnabled = checked
+                                                                        }
+                                                                        
+                                                                        attackDataModel.updateNodeAttackParameter(vehicleId, "attackComposition", newComp)
+                                                                        
                                                                         // 更新选中的攻击模式列表
-                                                                        updateSelectedAttackModes()
+                                                                        if (!isUpdating) updateAttackTypeFromCheckboxes()
                                                                     }
                                                                 }
                                                             }
@@ -863,9 +696,8 @@ Rectangle {
                                                             model: ["持续攻击", "间歇攻击", "突发攻击"]
                                                             currentIndex: 0
                                                             onCurrentIndexChanged: {
-                                                                if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
-                                                                    saveCurrentVehicleParameters()
-                                                                }
+                                                                if (isUpdating) return
+                                                                saveCurrentVehicleParameters()
                                                             }
                                                         }
                                                     }
@@ -995,19 +827,9 @@ Rectangle {
                                                         value: 60
                                                         stepSize: 10
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             durationInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("duration", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("duration", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1059,19 +881,9 @@ Rectangle {
                                                         value: 10
                                                         stepSize: 1
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             frequencyInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("frequency", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("frequency", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1129,19 +941,9 @@ Rectangle {
                                                         value: 5
                                                         stepSize: 1
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             intensityInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("intensity", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("intensity", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1193,19 +995,9 @@ Rectangle {
                                                         value: 50
                                                         stepSize: 5
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             rangeInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("range", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("range", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1264,20 +1056,10 @@ Rectangle {
                                                         value: 100
                                                         stepSize: 10
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             console.log("delaySlider value changed:", value)
                                                             delayInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("delayInjection", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("delayInjection", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1329,19 +1111,9 @@ Rectangle {
                                                         value: 5
                                                         stepSize: 1
                                                         onValueChanged: {
+                                                            if (isUpdating) return
                                                             packetLossInput.text = value.toString()
-                                                            if (attackTargetTypeCombo) {
-                                                                if (attackTargetTypeCombo.currentIndex === 0) {
-                                                                    // SINGLE模式：保存当前车辆参数
-                                                                    saveCurrentVehicleParameters()
-                                                                } else if (attackTargetTypeCombo.currentIndex === 2) {
-                                                                    // ALL模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("expectedPacketLossRatio", value)
-                                                                } else if (attackTargetTypeCombo.currentIndex === 1) {
-                                                                    // MULTIPLE模式：更新所有选中车辆的参数
-                                                                    updateAllSelectedVehiclesParameter("expectedPacketLossRatio", value)
-                                                                }
-                                                            }
+                                                            saveCurrentVehicleParameters()
                                                         }
                                                     }
                                                 }
@@ -1464,7 +1236,7 @@ Rectangle {
                                                         packetLossSlider.value = 5
                                                         
                                                         // 保存重置后的参数到AttackDataModel
-                                                        if (attackTargetTypeCombo && attackTargetTypeCombo.currentIndex === 1) {
+                                                        if (attackTargetTypeComboRef && attackTargetTypeComboRef.currentIndex === 1) {
                                                             saveCurrentVehicleParameters()
                                                         }
                                                     }
@@ -1486,11 +1258,11 @@ Rectangle {
                                                         console.log("应用攻击参数设置")
                                                         
                                                         // 根据攻击目标类型设置攻击类型
-                                                        if (attackTargetTypeCombo) {
-                                                            var targetType = getAttackTypeByTargetType(attackTargetTypeCombo.currentIndex)
+                                                        if (attackTargetTypeComboRef) {
+                                                            var targetType = getAttackTypeByTargetType(attackTargetTypeComboRef.currentIndex)
                                                             console.log("设置攻击类型为:", targetType)
                                                             
-                                                            if (attackTargetTypeCombo.currentIndex === 0) { // SINGLE模式
+                                                            if (attackTargetTypeComboRef.currentIndex === 0) { // SINGLE模式
                                                                 // 更新所有车辆的攻击类型为SINGLE
                                                                 for (var i = 0; i < attackDataModel.nodeAttackParameters.count; i++) {
                                                                     attackDataModel.updateNodeAttackParameter(
@@ -1500,7 +1272,7 @@ Rectangle {
                                                                     )
                                                                 }
                                                                 console.log("已将所有车辆攻击类型设置为SINGLE")
-                                                            } else if (attackTargetTypeCombo.currentIndex === 1) { // MULTIPLE模式
+                                                            } else if (attackTargetTypeComboRef.currentIndex === 1) { // MULTIPLE模式
                                                                 // 只更新选中车辆的攻击类型为MULTIPLE
                                                                 for (var j = 0; j < vehicleSelectionStates.length; j++) {
                                                                     if (vehicleSelectionStates[j] === 1) {
@@ -1512,7 +1284,7 @@ Rectangle {
                                                                     }
                                                                 }
                                                                 console.log("已将选中车辆攻击类型设置为MULTIPLE")
-                                                            } else if (attackTargetTypeCombo.currentIndex === 2) { // ALL模式
+                                                            } else if (attackTargetTypeComboRef.currentIndex === 2) { // ALL模式
                                                                 // 更新所有车辆的攻击类型为ALL
                                                                 for (var k = 0; k < attackDataModel.nodeAttackParameters.count; k++) {
                                                                     attackDataModel.updateNodeAttackParameter(
@@ -1539,7 +1311,7 @@ Rectangle {
                                                     onClicked: {
                                                         // 根据当前攻击目标类型导出相应的数据
                                                         var jsonData
-                                                        var currentMode = getAttackTypeByTargetType(attackTargetTypeCombo.currentIndex)
+                                                        var currentMode = getAttackTypeByTargetType(attackTargetTypeComboRef.currentIndex)
                                                         
                                                         if (currentMode === "SINGLE") {
                                                             // SINGLE模式：只导出当前选中的车辆
@@ -2032,11 +1804,114 @@ Rectangle {
             border.color: "#333333"
             border.width: 1
             radius: 10
+
+            Rectangle {
+                id: topologyHeader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 30
+                color: "#1E1E1E"
+
+                FluText {
+                    text: "SpoioMoudle"
+                    font.pixelSize: 16
+                    font.bold: true
+                    textColor: "white"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                ComboBox {
+                    id: spoioModuleSelector
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 120
+                    height: 30
+
+                    model: ["model1", "model2", "model3", "model4", "model5", "model6", "model7", "model8"]
+                    currentIndex: 0
+
+                    background: Rectangle {
+                        color: "#21262d"
+                        border.color: "#30363d"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    contentItem: Text {
+                        text: spoioModuleSelector.displayText
+                        color: "#f0f6fc"
+                        font.pixelSize: 12
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 10
+                    }
+
+                    popup: Popup {
+                        y: spoioModuleSelector.height
+                        width: spoioModuleSelector.width
+                        height: contentItem.implicitHeight
+                        padding: 1
+
+                        background: Rectangle {
+                            color: "#21262d"
+                            border.color: "#30363d"
+                            border.width: 1
+                            radius: 4
+                        }
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: spoioModuleSelector.popup.visible ? spoioModuleSelector.delegateModel : null
+                            currentIndex: spoioModuleSelector.highlightedIndex
+
+                            delegate: ItemDelegate {
+                                width: spoioModuleSelector.width
+                                height: 30
+
+                                background: Rectangle {
+                                    color: parent.hovered ? "#30363d" : "transparent"
+                                    radius: 2
+                                }
+
+                                contentItem: Text {
+                                    text: modelData
+                                    color: "#f0f6fc"
+                                    font.pixelSize: 12
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: 10
+                                }
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        var idx = 0
+                        if (attackDataModel && typeof attackDataModel.spoioMoudle === "string") {
+                            var n = parseInt(attackDataModel.spoioMoudle.replace("model", ""))
+                            if (!isNaN(n) && n >= 1 && n <= 8) idx = n - 1
+                        }
+                        currentIndex = idx
+                    }
+
+                    onCurrentIndexChanged: {
+                        if (attackDataModel) {
+                            attackDataModel.spoioMoudle = "model" + (currentIndex + 1)
+                        }
+                    }
+                }
+            }
             
             // 车辆拓扑Canvas区域
             Canvas {
                 id: vehicleTopologyCanvas
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.top: topologyHeader.bottom
                 anchors.margins: 10
                 
                 // 模式8的拓扑配置（固定显示）
@@ -2638,7 +2513,7 @@ Rectangle {
                                 }
                             }
 
-                                                        // 底部攻击控制按钮区域
+                            // 顶部攻击控制按钮区域
                             Item {
                                 width: parent.width
                                 height: 45

@@ -59,8 +59,8 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 currentValue: (vehicleDataModel && vehicleDataModel.vehicle && vehicleDataModel.vehicle.steering_angle !== undefined)
                               ? Number(vehicleDataModel.vehicle.steering_angle)*10 : 0
-                maxValue: 50
-                minValue: -50
+                maxValue: 20
+                minValue: -20
                 initialValue: 0
                 unit: "°"
                 primaryColor: Theme.tileColor
@@ -88,8 +88,8 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 currentValue: (vehicleDataModel && vehicleDataModel.vehicle && vehicleDataModel.vehicle.motor_rpm_avg !== undefined)
                               ? Number(vehicleDataModel.vehicle.motor_rpm_avg) : 0
-                maxValue: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? 15 : 1200
-                minValue: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? 0 : -1200
+                maxValue: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? 1200 : 1200
+                minValue: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? -1200 : -1200
                 unit: "RPM"
                 primaryColor: Theme.tileColor
                 backgroundColor: "#333333"
@@ -101,7 +101,7 @@ Rectangle {
                 initialValue: 0
                 dashboardRadius: dashboardContainer.dynamicRadius
                 fontFamily: "Arial"
-                labelText: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? "前车间距" : "轮胎转速"
+                labelText: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? "轮胎转速" : "轮胎转速"
                 valueFontSize: 25
             }
         }
@@ -115,8 +115,18 @@ Rectangle {
             DashboardComponent {
                 id: batteryDashboard
                 anchors.horizontalCenter: parent.horizontalCenter
-                currentValue: (vehicleDataModel && vehicleDataModel.vehicle && vehicleDataModel.vehicle.battery_level !== undefined)
-                              ? ((Number(vehicleDataModel.vehicle.battery_level) - 24.5) / (28.5 - 24.5)) * 100 : 0
+                property real maxbattery: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? 26.5 : 28.5
+                property real minbattery: (vehicleDataModel && vehicleDataModel.hunterID !== "Car1") ? 23.5 : 24.5
+                currentValue: {
+                    if (vehicleDataModel && vehicleDataModel.vehicle && vehicleDataModel.vehicle.battery_level !== undefined) {
+                        var batteryLevel = Number(vehicleDataModel.vehicle.battery_level);
+                        var percentage = ((batteryLevel - minbattery) / (maxbattery - minbattery)) * 100;
+                        if (percentage > 100) return 100;
+                        if (percentage < 0) return 0;
+                        return percentage;
+                    }
+                    return 0;
+                }
                 maxValue: 100.0
                 minValue: 0.0
                 unit: "%"

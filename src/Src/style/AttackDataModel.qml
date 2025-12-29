@@ -8,6 +8,7 @@ QtObject {
     property string startTime: "2023-10-15T14:30:00Z"
     property string missionId: "MISSION-ALPHA"
     property string priority: "HIGH"
+    property string spoioMoudle: "model1"
     
     // 攻击目标属性
     property QtObject attackTarget: QtObject {
@@ -170,6 +171,15 @@ QtObject {
         metadata.status = newStatus;
         metadata.lastModified = new Date().toISOString();
     }
+
+    function getEnabledAttackTypes(attackComposition) {
+        var enabledTypes = []
+        if (!attackComposition) return enabledTypes
+        if (attackComposition.ddosEnabled === true) enabledTypes.push("DDoS")
+        if (attackComposition.replayEnabled === true) enabledTypes.push("REPLAY")
+        if (attackComposition.spoofingEnabled === true) enabledTypes.push("SPOOFING")
+        return enabledTypes
+    }
     
     // 辅助方法：从JSON数据批量导入节点攻击参数
     function importFromJSON(jsonData) {
@@ -181,6 +191,7 @@ QtObject {
             if (jsonData.startTime) startTime = jsonData.startTime;
             if (jsonData.missionId) missionId = jsonData.missionId;
             if (jsonData.priority) priority = jsonData.priority;
+            if (jsonData.SpoioMoudle) spoioMoudle = jsonData.SpoioMoudle;
             
             // 更新攻击目标
             if (jsonData.attackTarget) {
@@ -232,6 +243,7 @@ QtObject {
             "startTime": startTime,
             "missionId": missionId,
             "priority": priority,
+            "SpoioMoudle": spoioMoudle,
             "attackTarget": {
                 "type": attackTarget.type,
                 "selectedNodes": attackTarget.selectedNodes
@@ -254,7 +266,7 @@ QtObject {
                         "selectionMode": item.attackLinks.selectionMode,
                         "selectedLinks": item.attackLinks.selectedLinks
                     },
-                    "attackType": item.attackType,
+                    "attackType": item.attackType === "MIXED" ? getEnabledAttackTypes(item.attackComposition) : item.attackType,
                     "attackMethod": item.attackMethod,
                     "attackComposition": {
                         "spoofingEnabled": item.attackComposition.spoofingEnabled,
@@ -287,6 +299,7 @@ QtObject {
             "startTime": startTime,
             "missionId": missionId,
             "priority": priority,
+            "SpoioMoudle": spoioMoudle,
             "attackTarget": {
                 "type": mode,
                 "selectedNodes": []
@@ -330,7 +343,7 @@ QtObject {
                             "selectionMode": item.attackLinks.selectionMode,
                             "selectedLinks": item.attackLinks.selectedLinks
                         },
-                        "attackType": item.attackType,
+                        "attackType": item.attackType === "MIXED" ? getEnabledAttackTypes(item.attackComposition) : item.attackType,
                         "attackMethod": item.attackMethod,
                         "attackComposition": {
                             "spoofingEnabled": item.attackComposition.spoofingEnabled,

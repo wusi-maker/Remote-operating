@@ -704,7 +704,7 @@ Rectangle{
                             }
                             
                             Text {
-                                text: "速度: " + Number(model.speed).toFixed(2) + " km/h"
+                                text: "速度: " + Number(model.speed).toFixed(2) + " m/s"
                                 color: "#a0a0a0"
                                 font.pixelSize: 12
                                 anchors.verticalCenter: parent.verticalCenter

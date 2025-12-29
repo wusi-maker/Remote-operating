@@ -30,6 +30,12 @@ Item {
     property bool enableDataValidation: true //是否启用数据验证
     property bool showLegend: true // 是否显示图例
     property string legendPosition: "topRight" // 图例位置："topLeft", "topRight", "bottomLeft", "bottomRight"
+    property bool showTitle: true
+    property bool showAxisLabels: true
+    property bool showTicks: true
+    property bool showDataPoints: false
+    property int plotMargin: 50
+    property int plotTopMargin: 70
     
     width: 400
     height: 300
@@ -48,7 +54,7 @@ Item {
     // 重绘节流定时器
     Timer {
         id: redrawTimer
-        interval: 50 // 限制重绘频率为20fps
+        interval: 33
         running: false
         repeat: false
         onTriggered: {
@@ -77,8 +83,8 @@ Item {
     Canvas {
         id: gridCanvas
         anchors.fill: parent
-        anchors.margins: 50
-        anchors.topMargin: 70
+        anchors.margins: root.plotMargin
+        anchors.topMargin: root.plotTopMargin
         anchors.centerIn: parent
         
         onPaint: {
@@ -110,14 +116,13 @@ Item {
     Canvas {
         id: curveCanvas
         anchors.fill: parent
-        anchors.margins: 50
-        anchors.topMargin: 70
+        anchors.margins: root.plotMargin
+        anchors.topMargin: root.plotTopMargin
         
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
             
-            // 绘制正弦波（如果启用）
             if (root.showSineWave) {
                 ctx.strokeStyle = root.curveColor
                 ctx.lineWidth = root.curveWidth
@@ -136,55 +141,60 @@ Item {
                 ctx.stroke()
             }
             
-            // 绘制多条曲线
+            var yMin = root.yMin
+            var yMax = root.yMax
+            if (root.autoScaleY) {
+                var allYValues = []
+                if (root.curves.length > 0) {
+                    for (var ci = 0; ci < root.curves.length; ci++) {
+                        var c = root.curves[ci]
+                        if (c && c.data && c.data.length > 0) {
+                            for (var di = 0; di < c.data.length; di++) {
+                                allYValues.push(c.data[di].y)
+                            }
+                        }
+                    }
+                } else if (root.dataPoints.length > 0) {
+                    for (var dpi = 0; dpi < root.dataPoints.length; dpi++) {
+                        allYValues.push(root.dataPoints[dpi].y)
+                    }
+                }
+                if (allYValues.length > 0) {
+                    var minY = Math.min.apply(Math, allYValues)
+                    var maxY = Math.max.apply(Math, allYValues)
+                    var padding = (maxY - minY) * 0.1
+                    yMin = minY - padding
+                    yMax = maxY + padding
+                    root.yMin = yMin
+                    root.yMax = yMax
+                }
+            }
+            
             for (var curveIndex = 0; curveIndex < root.curves.length; curveIndex++) {
                 var curve = root.curves[curveIndex]
                 if (!curve || !curve.data || curve.data.length < 2) continue
                 
-                // 设置当前曲线的样式
                 ctx.strokeStyle = curve.color || "#3498db"
                 ctx.lineWidth = curve.width || 2
                 ctx.lineCap = "round"
                 ctx.lineJoin = "round"
                 
-                // 计算Y轴范围（如果启用自动缩放）
-                var yMin = root.yMin
-                var yMax = root.yMax
-                if (root.autoScaleY) {
-                    var allYValues = []
-                    for (var ci = 0; ci < root.curves.length; ci++) {
-                        if (root.curves[ci] && root.curves[ci].data) {
-                            for (var di = 0; di < root.curves[ci].data.length; di++) {
-                                allYValues.push(root.curves[ci].data[di].y)
-                            }
-                        }
-                    }
-                    if (allYValues.length > 0) {
-                        var minY = Math.min.apply(Math, allYValues)
-                        var maxY = Math.max.apply(Math, allYValues)
-                        var padding = (maxY - minY) * 0.1
-                        yMin = minY - padding
-                        yMax = maxY + padding
-                        root.yMin = yMin
-                        root.yMax = yMax
-                    }
-                }
-                
-                // 绘制曲线
                 ctx.beginPath()
-                for (var i = 0; i < curve.data.length; i++) {
+                var total = curve.data.length
+                var displayCount = Math.min(total, root.maxDataPoints)
+                var startIndex = Math.max(0, total - displayCount)
+                for (var i = startIndex; i < total; i++) {
                     var point = curve.data[i]
-                    var px = (i / Math.max(curve.data.length - 1, 1)) * width
+                    var px = ((i - startIndex) / Math.max(displayCount - 1, 1)) * width
                     var py = height - ((point.y - yMin) / (yMax - yMin)) * height
                     
-                    if (i === 0) {
+                    if (i === startIndex) {
                         ctx.moveTo(px, py)
                     } else {
                         var curveType = curve.type || root.curveType
                         if (curveType === "smooth") {
-                            // 使用二次贝塞尔曲线平滑连接
                             var prevPoint = curve.data[i-1]
-                            var prevPx = ((i-1) / Math.max(curve.data.length - 1, 1)) * width
+                            var prevPx = (((i-1) - startIndex) / Math.max(displayCount - 1, 1)) * width
                             var prevPy = height - ((prevPoint.y - yMin) / (yMax - yMin)) * height
                             var cpx = (prevPx + px) / 2
                             var cpy = (prevPy + py) / 2
@@ -196,100 +206,78 @@ Item {
                 }
                 ctx.stroke()
                 
-                // 绘制数据点
-                ctx.fillStyle = curve.color || "#3498db"
-                for (var j = 0; j < curve.data.length; j++) {
-                    var dp = curve.data[j]
-                    var dpx = (j / Math.max(curve.data.length - 1, 1)) * width
-                    var dpy = height - ((dp.y - yMin) / (yMax - yMin)) * height
-                    ctx.beginPath()
-                    ctx.arc(dpx, dpy, 3, 0, 2 * Math.PI)
-                    ctx.fill()
+                if (root.showDataPoints) {
+                    ctx.fillStyle = curve.color || "#3498db"
+                    for (var j = startIndex; j < total; j++) {
+                        var dp = curve.data[j]
+                        var dpx = ((j - startIndex) / Math.max(displayCount - 1, 1)) * width
+                        var dpy = height - ((dp.y - yMin) / (yMax - yMin)) * height
+                        ctx.beginPath()
+                        ctx.arc(dpx, dpy, 3, 0, 2 * Math.PI)
+                        ctx.fill()
+                    }
                 }
             }
             
-            // 向后兼容：绘制旧的单曲线数据
             if (root.dataPoints.length > 1) {
                 ctx.strokeStyle = root.curveColor
                 ctx.lineWidth = root.curveWidth
                 ctx.lineCap = "round"
                 ctx.lineJoin = "round"
                 
-                // 计算Y轴范围
-                if (root.autoScaleY && root.curves.length === 0) {
-                    var minY = Math.min.apply(Math, root.dataPoints.map(function(p) { return p.y }))
-                    var maxY = Math.max.apply(Math, root.dataPoints.map(function(p) { return p.y }))
-                    var padding = (maxY - minY) * 0.1
-                    root.yMin = minY - padding
-                    root.yMax = maxY + padding
-                }
-                
                 ctx.beginPath()
-                for (var i = 0; i < root.dataPoints.length; i++) {
-                    var point = root.dataPoints[i]
-                    var px = (i / Math.max(root.dataPoints.length - 1, 1)) * width
-                    var py = height - ((point.y - root.yMin) / (root.yMax - root.yMin)) * height
+                var dpTotal = root.dataPoints.length
+                var dpDisplayCount = Math.min(dpTotal, root.maxDataPoints)
+                var dpStartIndex = Math.max(0, dpTotal - dpDisplayCount)
+                for (var i2 = dpStartIndex; i2 < dpTotal; i2++) {
+                    var point2 = root.dataPoints[i2]
+                    var px2 = ((i2 - dpStartIndex) / Math.max(dpDisplayCount - 1, 1)) * width
+                    var py2 = height - ((point2.y - yMin) / (yMax - yMin)) * height
                     
-                    if (i === 0) {
-                        ctx.moveTo(px, py)
+                    if (i2 === dpStartIndex) {
+                        ctx.moveTo(px2, py2)
                     } else {
                         if (root.curveType === "smooth") {
-                            // 使用二次贝塞尔曲线平滑连接
-                            var prevPoint = root.dataPoints[i-1]
-                            var prevPx = ((i-1) / Math.max(root.dataPoints.length - 1, 1)) * width
-                            var prevPy = height - ((prevPoint.y - root.yMin) / (root.yMax - root.yMin)) * height
-                            var cpx = (prevPx + px) / 2
-                            var cpy = (prevPy + py) / 2
-                            ctx.quadraticCurveTo(cpx, cpy, px, py)
+                            var prevPoint2 = root.dataPoints[i2-1]
+                            var prevPx2 = (((i2-1) - dpStartIndex) / Math.max(dpDisplayCount - 1, 1)) * width
+                            var prevPy2 = height - ((prevPoint2.y - yMin) / (yMax - yMin)) * height
+                            var cpx2 = (prevPx2 + px2) / 2
+                            var cpy2 = (prevPy2 + py2) / 2
+                            ctx.quadraticCurveTo(cpx2, cpy2, px2, py2)
                         } else {
-                            ctx.lineTo(px, py)
+                            ctx.lineTo(px2, py2)
                         }
                     }
                 }
                 ctx.stroke()
                 
-                // 绘制数据点
-                ctx.fillStyle = root.curveColor
-                for (var j = 0; j < root.dataPoints.length; j++) {
-                    var dp = root.dataPoints[j]
-                    var dpx = (j / Math.max(root.dataPoints.length - 1, 1)) * width
-                    var dpy = height - ((dp.y - root.yMin) / (root.yMax - root.yMin)) * height
-                    ctx.beginPath()
-                    ctx.arc(dpx, dpy, 3, 0, 2 * Math.PI)
-                    ctx.fill()
+                if (root.showDataPoints) {
+                    ctx.fillStyle = root.curveColor
+                    for (var j2 = dpStartIndex; j2 < dpTotal; j2++) {
+                        var dp2 = root.dataPoints[j2]
+                        var dpx2 = ((j2 - dpStartIndex) / Math.max(dpDisplayCount - 1, 1)) * width
+                        var dpy2 = height - ((dp2.y - yMin) / (yMax - yMin)) * height
+                        ctx.beginPath()
+                        ctx.arc(dpx2, dpy2, 3, 0, 2 * Math.PI)
+                        ctx.fill()
+                    }
                 }
                 
-                // === 优化后的连接线绘制（仅对旧数据） ===
                 if (root.dataPoints.length > 0) {
-                    // 保存当前绘图状态
                     ctx.save()
-                    
-                    // 获取最后一个数据点
                     var lastPoint = root.dataPoints[root.dataPoints.length - 1]
-                    
-                    // 正确计算X坐标（根据数据索引）
-                    var lastPx = (root.dataPoints.length - 1) * (width / Math.max(root.dataPoints.length - 1, 1))
-                    
-                    // 获取文本组件的中心点（转换为Canvas坐标系）
                     var textCenter = latestValueDisplay.mapToItem(curveCanvas,
                         latestValueDisplay.width/2,
                         latestValueDisplay.height/2)
-                    
-                    // 设置虚线样式
                     ctx.strokeStyle = "#95a5a6"
                     ctx.lineWidth = 1 // 更细的线更美观
                     ctx.setLineDash([5, 3]) // 优化虚线样式
-                    
-                    // 计算数据点在Canvas中的实际Y坐标
-                    var dataPointY = height - ((lastPoint.y - root.yMin) / (root.yMax - root.yMin)) * height
-                    
-                    // 绘制水平连接线（Y轴坐标保持不变）
+                    var lastPx = (root.dataPoints.length - 1) * (width / Math.max(root.dataPoints.length - 1, 1))
+                    var dataPointY = height - ((lastPoint.y - yMin) / (yMax - yMin)) * height
                     ctx.beginPath()
                     ctx.moveTo(lastPx, dataPointY) // 从数据点开始
                     ctx.lineTo(0, dataPointY) // 水平连接到右边缘y轴处
                     ctx.stroke()
-                    
-                    // 恢复原始绘图状态
                     ctx.restore()
                 }
             }
@@ -299,11 +287,12 @@ Item {
     // 标题
     TextInput {
         id: titleInput
+        visible: root.showTitle
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: 10
         text: root.chartTitle
-        font.pixelSize: 16
+        font.pixelSize: 12
         font.bold: true
         color: "#ecf0f1"
         horizontalAlignment: Text.AlignHCenter
@@ -322,6 +311,7 @@ Item {
     
     // Y轴标签
     Text {
+        visible: root.showAxisLabels
         anchors.right: gridCanvas.left
         anchors.verticalCenter: parent.verticalCenter
         anchors.rightMargin:5
@@ -334,6 +324,7 @@ Item {
     
     // X轴标签
     Text {
+        visible: root.showAxisLabels
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: 10
@@ -347,6 +338,7 @@ Item {
         id:tickRectangle
         model: 6
         Text {
+            visible: root.showTicks
             property real yValue: root.yMin + (root.yMax - root.yMin) * (5 - index) / 5
             anchors.right: gridCanvas.left
             anchors.rightMargin: 5
@@ -709,7 +701,7 @@ Item {
     onCurveColorChanged: updateCurve()
     onCurveWidthChanged: updateCurve()
     onDataPointsChanged: updateCurve()
-    onCurvesChanged: forceUpdateCurve() // 多曲线数据变化需要立即更新
+    onCurvesChanged: updateCurve()
     onCurveTypeChanged: forceUpdateCurve() // 曲线类型变化需要立即更新
     onAmplitudeChanged: updateCurve()
     onFrequencyChanged: updateCurve()
